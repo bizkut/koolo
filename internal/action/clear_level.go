@@ -115,19 +115,7 @@ func clearRoom(room data.Room, filter data.MonsterFilter) error {
 		}
 
 		SortEnemiesByPriority(&monsters)
-
-		// Check if there are monsters that can summon new monsters, and kill them first
-		targetMonster := data.Monster{}
-		for _, m := range monsters {
-			if !ctx.Char.ShouldIgnoreMonster(m) {
-				if m.IsMonsterRaiser() {
-					targetMonster = m
-					break
-				} else if targetMonster.UnitID == 0 {
-					targetMonster = m
-				}
-			}
-		}
+		targetMonster := monsters[0]
 
 		if targetMonster.UnitID == 0 {
 			//No valid targets, done

@@ -25,7 +25,7 @@ func BuffIfRequired() {
 	// Don't buff if we have 2 or more monsters close to the character.
 	// Don't merge with the previous if, because we want to avoid this expensive check if we don't need to buff
 	closeMonsters := 0
-	for _, m := range ctx.Data.Monsters {
+	for _, m := range ctx.Data.Monsters.Enemies(data.MonsterAnyFilter()) {
 		if ctx.PathFinder.DistanceFromMe(m.Position) < 15 {
 			closeMonsters++
 		}

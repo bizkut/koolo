@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"time"
+
 	"github.com/hectorgimenez/koolo/internal/context"
 	"github.com/hectorgimenez/koolo/internal/pather"
 
@@ -222,7 +223,7 @@ func FindSafePosition(targetMonster data.Monster, dangerDistance int, safeDistan
 		}
 
 		// Calculate minimum distance to any monster
-		minMonsterDist := GetDistanceFromClosestEnemy(pos, ctx.Data.Monsters)
+		minMonsterDist := GetDistanceFromClosestEnemy(pos, ctx.Data.Monsters.Enemies(data.MonsterAnyFilter()))
 
 		// Strictly skip positions that are too close to monsters
 		if minMonsterDist < float64(minSafeMonsterDistance) {
@@ -265,7 +266,7 @@ func FindSafePosition(targetMonster data.Monster, dangerDistance int, safeDistan
 	// Return the best position if we found any
 	if len(scoredPositions) > 0 {
 		ctx.Logger.Info(fmt.Sprintf("Found safe position with score %.2f at distance %.2f from nearest monster",
-			scoredPositions[0].score, GetDistanceFromClosestEnemy(scoredPositions[0].pos, ctx.Data.Monsters)))
+			scoredPositions[0].score, GetDistanceFromClosestEnemy(scoredPositions[0].pos, ctx.Data.Monsters.Enemies(data.MonsterAnyFilter()))))
 		return scoredPositions[0].pos, true
 	}
 

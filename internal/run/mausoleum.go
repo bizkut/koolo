@@ -1,9 +1,9 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -30,14 +30,8 @@ func (a Mausoleum) CheckConditions(parameters *RunParameters) SequencerResult {
 }
 
 func (a Mausoleum) Run(parameters *RunParameters) error {
-
 	// Define a defaut filter
-	monsterFilter := data.MonsterAnyFilter()
-
-	// Update filter if we selected to clear only elites
-	if a.ctx.CharacterCfg.Game.Mausoleum.FocusOnElitePacks {
-		monsterFilter = data.MonsterEliteFilter()
-	}
+	monsterFilter := step.MonsterClearLevelFilter()
 
 	// Use the waypoint
 	err := action.WayPoint(area.ColdPlains)

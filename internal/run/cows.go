@@ -117,7 +117,9 @@ func (a Cows) Run(parameters *RunParameters) error {
 		return err
 	}
 
-	return action.ClearCurrentLevel(a.ctx.CharacterCfg.Game.Cows.OpenChests, data.MonsterAnyFilter())
+	filter := step.MonsterClearLevelFilter()
+
+	return action.ClearCurrentLevel(a.ctx.CharacterCfg.Game.Cows.OpenChests, filter)
 }
 
 func (a Cows) getWirtsLeg() error {

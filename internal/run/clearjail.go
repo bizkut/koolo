@@ -1,9 +1,9 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -30,16 +30,13 @@ func (a ClearJail) CheckConditions(parameters *RunParameters) SequencerResult {
 }
 
 func (t ClearJail) Run(parameters *RunParameters) error {
-
+	filter := step.MonsterClearLevelFilter()
 	// Use waypoint to JailLevel1
 	err := action.WayPoint(area.JailLevel1)
 	if err != nil {
 		return err
 	}
 
-	return action.ClearCurrentLevel(false, data.MonsterAnyFilter())
-	//return action.ClearCurrentLevel(false, data.MonsterEliteFilter())
-
-	//return action.ClearAreaAroundPlayer(250, data.MonsterEliteFilter())
+	return action.ClearCurrentLevel(false, filter)
 
 }

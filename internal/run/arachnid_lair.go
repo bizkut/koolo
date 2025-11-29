@@ -1,10 +1,10 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -34,10 +34,7 @@ func (a ArachnidLair) CheckConditions(parameters *RunParameters) SequencerResult
 }
 
 func (a ArachnidLair) Run(parameters *RunParameters) error {
-	filter := data.MonsterAnyFilter()
-	if a.ctx.CharacterCfg.Game.ArachnidLair.FocusOnElitePacks {
-		filter = data.MonsterEliteFilter()
-	}
+	filter := step.MonsterClearLevelFilter()
 
 	err := action.WayPoint(area.SpiderForest)
 	if err != nil {

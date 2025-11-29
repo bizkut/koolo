@@ -1,10 +1,10 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -34,14 +34,8 @@ func (s StonyTomb) CheckConditions(parameters *RunParameters) SequencerResult {
 }
 
 func (s StonyTomb) Run(parameters *RunParameters) error {
-
 	// Setup default filter
-	monsterFilter := data.MonsterAnyFilter()
-
-	// Update filter if we selected to clear only elites
-	if s.ctx.CharacterCfg.Game.StonyTomb.FocusOnElitePacks {
-		monsterFilter = data.MonsterEliteFilter()
-	}
+	monsterFilter := step.MonsterClearLevelFilter()
 
 	// Use the waypoint
 	err := action.WayPoint(area.DryHills)

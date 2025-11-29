@@ -22,10 +22,6 @@ type Hammerdin struct {
 	BaseCharacter
 }
 
-func (s Hammerdin) ShouldIgnoreMonster(m data.Monster) bool {
-	return false
-}
-
 func (s Hammerdin) CheckKeyBindings() []skill.ID {
 	requireKeybindings := []skill.ID{skill.Concentration, skill.HolyShield, skill.TomeOfTownPortal}
 	missingKeybindings := []skill.ID{}

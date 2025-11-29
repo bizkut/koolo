@@ -1,9 +1,9 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -31,12 +31,7 @@ func (p Pit) CheckConditions(parameters *RunParameters) SequencerResult {
 
 func (p Pit) Run(parameters *RunParameters) error {
 	// Define a default filter
-	monsterFilter := data.MonsterAnyFilter()
-
-	// Update filter if we selected to clear only elites
-	if p.ctx.CharacterCfg.Game.Pit.FocusOnElitePacks {
-		monsterFilter = data.MonsterEliteFilter()
-	}
+	monsterFilter := step.MonsterClearLevelFilter()
 
 	if !p.ctx.CharacterCfg.Game.Pit.MoveThroughBlackMarsh {
 		err := action.WayPoint(area.OuterCloister)

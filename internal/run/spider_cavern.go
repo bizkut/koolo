@@ -1,10 +1,10 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -35,12 +35,7 @@ func (run SpiderCavern) CheckConditions(parameters *RunParameters) SequencerResu
 
 func (run SpiderCavern) Run(parameters *RunParameters) error {
 	// Define a default monster filter
-	monsterFilter := data.MonsterAnyFilter()
-
-	// Update filter if we selected to clear only elites
-	if run.ctx.CharacterCfg.Game.SpiderCavern.FocusOnElitePacks {
-		monsterFilter = data.MonsterEliteFilter()
-	}
+	monsterFilter := step.MonsterClearLevelFilter()
 
 	// Use waypoint to Spider Forest
 	err := action.WayPoint(area.SpiderForest)

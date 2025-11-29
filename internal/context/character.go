@@ -26,7 +26,6 @@ type Character interface {
 		monsterSelector func(d game.Data) (data.UnitID, bool),
 		skipOnImmunities []stat.Resist,
 	) error
-	ShouldIgnoreMonster(m data.Monster) bool
 }
 type StatAllocation struct {
 	Stat   stat.ID

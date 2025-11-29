@@ -408,7 +408,6 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 	var distanceToTarget int
 	var pathFound bool
 	var pathErrors int
-	var stuck bool
 	blacklistedInteractions := map[data.UnitID]bool{}
 	adjustMinDist := false
 
@@ -449,14 +448,7 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 			if !opts.IgnoreMonsters() && (!ctx.Data.CanTeleport() || overrideClearPathDist) && time.Since(actionLastMonsterHandlingTime) > monsterHandleCooldown {
 				actionLastMonsterHandlingTime = time.Now()
 				filters := opts.MonsterFilters()
-				filters = append(filters, func(monsters data.Monsters) (filteredMonsters []data.Monster) {
-					for _, m := range monsters {
-						if stuck || !ctx.Char.ShouldIgnoreMonster(m) {
-							filteredMonsters = append(filteredMonsters, m)
-						}
-					}
-					return filteredMonsters
-				})
+				filters = append(filters, step.MonsterNavigationFilter())
 				_ = ClearAreaAroundPosition(ctx.Data.PlayerUnit.Position, clearPathDist, filters...)
 				if !opts.IgnoreItems() {
 					// After clearing, immediately try to pick up items
@@ -561,6 +553,7 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 				moveOptions = append(moveOptions, step.WithDistanceToFinish(step.DistanceToFinishMoving))
 			}
 		}
+		moveOptions = append(moveOptions, step.WithMonsterFilter(step.MonsterNavigationFilter()))
 
 		//We've reached our target destination !
 		if distanceToTarget <= finishMoveDist || (adjustMinDist && distanceToTarget <= finishMoveDist*2) {
@@ -649,11 +642,10 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 			if errors.Is(moveErr, step.ErrMonstersInPath) {
 				continue
 			} else if errors.Is(moveErr, step.ErrPlayerStuck) || errors.Is(moveErr, step.ErrPlayerRoundTrip) {
-				if (!ctx.Data.CanTeleport() || stuck) || ctx.Data.PlayerUnit.Area.IsTown() {
+				if (!ctx.Data.CanTeleport() || ctx.CurrentGame.IsBlocked()) || ctx.Data.PlayerUnit.Area.IsTown() {
 					ctx.PathFinder.RandomMovement()
 					time.Sleep(time.Millisecond * 200)
 				}
-				stuck = true
 				continue
 			} else if errors.Is(moveErr, step.ErrNoPath) && pathStep > 0 {
 				ctx.PathFinder.RandomMovement()
@@ -667,7 +659,6 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 			adjustMinDist = true
 		}
 
-		stuck = false
 		previousPosition = ctx.Data.PlayerUnit.Position
 		//If we're not in town and moved without errors, move forward in the path
 		if !ctx.Data.AreaData.Area.IsTown() {

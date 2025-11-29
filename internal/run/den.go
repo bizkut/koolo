@@ -74,7 +74,12 @@ func (d Den) Run(parameters *RunParameters) error {
 		return err
 	}
 
-	if err := action.ClearCurrentLevel(false, data.MonsterAnyFilter()); err != nil {
+	filter := data.MonsterAnyFilter()
+	if IsFarmingRun(parameters) {
+		filter = step.MonsterClearLevelFilter()
+	}
+
+	if err := action.ClearCurrentLevel(false, filter); err != nil {
 		return err
 	}
 

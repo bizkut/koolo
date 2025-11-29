@@ -42,13 +42,6 @@ func (s AmazonLeveling) CheckKeyBindings() []skill.ID {
 	return []skill.ID{}
 }
 
-func (s AmazonLeveling) ShouldIgnoreMonster(m data.Monster) bool {
-	if !game.IsActBoss(m) && !game.IsQuestEnemy(m) {
-		return m.IsImmune(stat.LightImmune)
-	}
-	return false
-}
-
 func (s AmazonLeveling) KillMonsterSequence(
 	monsterSelector func(d game.Data) (data.UnitID, bool),
 	skipOnImmunities []stat.Resist,
@@ -614,7 +607,7 @@ func (s AmazonLeveling) GetAdditionalRunewords() []string {
 }
 
 func (s AmazonLeveling) InitialCharacterConfigSetup() {
-
+	s.CharacterCfg.Character.SkipOnImmunities = []stat.Resist{stat.LightImmune}
 }
 
 func (s AmazonLeveling) AdjustCharacterConfig() {

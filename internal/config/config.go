@@ -128,15 +128,18 @@ type CharacterCfg struct {
 		RejuvPotionCount   int         `yaml:"rejuvPotionCount"`
 	} `yaml:"inventory"`
 	Character struct {
-		Class                        string `yaml:"class"`
-		UseMerc                      bool   `yaml:"useMerc"`
-		StashToShared                bool   `yaml:"stashToShared"`
-		UseTeleport                  bool   `yaml:"useTeleport"`
-		ClearPathDist                int    `yaml:"clearPathDist"`
-		ShouldHireAct2MercFrozenAura bool   `yaml:"shouldHireAct2MercFrozenAura"`
-		UseExtraBuffs                bool   `yaml:"useExtraBuffs"`
-		BuffOnNewArea                bool   `yaml:"buffOnNewArea"`
-		BuffAfterWP                  bool   `yaml:"buffAfterWP"`
+		Class                        string        `yaml:"class"`
+		UseMerc                      bool          `yaml:"useMerc"`
+		StashToShared                bool          `yaml:"stashToShared"`
+		UseTeleport                  bool          `yaml:"useTeleport"`
+		ClearPathDist                int           `yaml:"clearPathDist"`
+		ShouldHireAct2MercFrozenAura bool          `yaml:"shouldHireAct2MercFrozenAura"`
+		UseExtraBuffs                bool          `yaml:"useExtraBuffs"`
+		BuffOnNewArea                bool          `yaml:"buffOnNewArea"`
+		BuffAfterWP                  bool          `yaml:"buffAfterWP"`
+		SkipOnImmunities             []stat.Resist `yaml:"skipOnImmunities"`
+		ClearLevelFocusElites        bool          `yaml:"clearLevelFocusElites"`
+		NavigationFocusElites        bool          `yaml:"navigationFocusElites"`
 		BerserkerBarb                struct {
 			FindItemSwitch              bool `yaml:"find_item_switch"`
 			SkipPotionPickupInTravincal bool `yaml:"skip_potion_pickup_in_travincal"`

@@ -49,7 +49,7 @@ func SortEnemiesByPriority(enemies *[]data.Monster) {
 		distanceI := ctx.PathFinder.DistanceFromMe(monsterI.Position)
 		distanceJ := ctx.PathFinder.DistanceFromMe(monsterJ.Position)
 
-		if distanceI > 2 && distanceJ > 2 {
+		if !ctx.CurrentGame.IsBlocked() {
 			if isPriorityI && !isPriorityJ {
 				return true
 			} else if !isPriorityI && isPriorityJ {

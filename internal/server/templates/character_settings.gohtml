@@ -589,6 +589,19 @@
                 </tr>
                 {{ end }}
             </table>
+            <h3>Monsters</h3>
+            <h4>Skip on immunities</h4>
+            <fieldset class="grid">
+                <label><input type="checkbox" name="gameCharacterSkipOnImmunities[]" value="cold" {{ if isInSlice .Config.Character.SkipOnImmunities "cold" }}checked{{ end }}> Cold</label>
+                <label><input type="checkbox" name="gameCharacterSkipOnImmunities[]" value="fire" {{ if isInSlice .Config.Character.SkipOnImmunities "fire" }}checked{{ end }}> Fire</label>
+                <label><input type="checkbox" name="gameCharacterSkipOnImmunities[]" value="light" {{ if isInSlice .Config.Character.SkipOnImmunities "light" }}checked{{ end }}> Light</label>
+                <label><input type="checkbox" name="gameCharacterSkipOnImmunities[]" value="poison" {{ if isInSlice .Config.Character.SkipOnImmunities "poison" }}checked{{ end }}> Poison</label>
+                <label><input type="checkbox" name="gameCharacterSkipOnImmunities[]" value="magic" {{ if isInSlice .Config.Character.SkipOnImmunities "magic" }}checked{{ end }}> Magic</label>
+            </fieldset>
+            <div class="input-info">Skip any non-mandatory monster that has ALL checked immunities</div>
+            <h4>Focus</h4>
+            <label><input type="checkbox" name="gameCharacterClearLevelFocusElites" {{ if .Config.Character.ClearLevelFocusElites }}checked{{ end }}>Elite packs only when clearing level</label>
+            <label><input type="checkbox" name="gameCharacterNavigationFocusElites" {{ if .Config.Character.NavigationFocusElites }}checked{{ end }}>Elite Packs only during navigation</label>
             <h3>Game Settings</h3><br>
             <label>
                 <input type="checkbox" name="createLobbyGames" {{ if .Config.Game.CreateLobbyGames }}checked{{ end }}/>

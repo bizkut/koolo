@@ -28,10 +28,6 @@ type PaladinLeveling struct {
 	BaseCharacter
 }
 
-func (s PaladinLeveling) ShouldIgnoreMonster(m data.Monster) bool {
-	return false
-}
-
 func (s PaladinLeveling) CheckKeyBindings() []skill.ID {
 	requireKeybindings := []skill.ID{}
 	missingKeybindings := []skill.ID{}

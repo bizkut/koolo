@@ -20,10 +20,6 @@ type MosaicSin struct {
 	BaseCharacter
 }
 
-func (s MosaicSin) ShouldIgnoreMonster(m data.Monster) bool {
-	return false
-}
-
 func (s MosaicSin) CheckKeyBindings() []skill.ID {
 	requireKeybindings := []skill.ID{skill.TigerStrike, skill.CobraStrike, skill.PhoenixStrike, skill.ClawsOfThunder, skill.BladesOfIce, skill.TomeOfTownPortal}
 	missingKeybindings := []skill.ID{}

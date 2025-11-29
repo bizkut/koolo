@@ -141,9 +141,6 @@ var blizzardSkillSequence = []skill.ID{
 }
 
 // --- End Skill Point Sequences ---
-func (s SorceressLeveling) ShouldIgnoreMonster(m data.Monster) bool {
-	return false
-}
 
 func (s SorceressLeveling) CheckKeyBindings() []skill.ID {
 	requireKeybindings := []skill.ID{}

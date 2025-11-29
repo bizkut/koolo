@@ -57,10 +57,7 @@ func (a Baal) CheckConditions(parameters *RunParameters) SequencerResult {
 
 func (s *Baal) Run(parameters *RunParameters) error {
 	// Set filter
-	filter := data.MonsterAnyFilter()
-	if s.ctx.CharacterCfg.Game.Baal.OnlyElites {
-		filter = data.MonsterEliteFilter()
-	}
+	filter := step.MonsterClearLevelFilter()
 	if s.clearMonsterFilter != nil {
 		filter = s.clearMonsterFilter
 	}

@@ -1,10 +1,10 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -34,7 +34,6 @@ func (a LowerKurast) CheckConditions(parameters *RunParameters) SequencerResult 
 }
 
 func (a LowerKurast) Run(parameters *RunParameters) error {
-
 	// Use Waypoint to Lower Kurast
 	err := action.WayPoint(area.LowerKurast)
 	if err != nil {
@@ -42,6 +41,6 @@ func (a LowerKurast) Run(parameters *RunParameters) error {
 	}
 
 	// Clear Lower Kurast
-	return action.ClearCurrentLevel(true, data.MonsterAnyFilter())
+	return action.ClearCurrentLevel(true, step.MonsterClearLevelFilter())
 
 }

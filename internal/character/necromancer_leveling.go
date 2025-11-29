@@ -58,10 +58,6 @@ type NecromancerLeveling struct {
 	lastCorpseExplosionCast map[data.UnitID]time.Time
 }
 
-func (s NecromancerLeveling) ShouldIgnoreMonster(m data.Monster) bool {
-	return false
-}
-
 func (n *NecromancerLeveling) GetAdditionalRunewords() []string {
 	return append(action.GetCastersCommonRunewords(), "White")
 }

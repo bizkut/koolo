@@ -6,6 +6,7 @@ import (
 	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/context"
 	terrorzones "github.com/hectorgimenez/koolo/internal/terrorzone"
 )
@@ -57,13 +58,13 @@ func (tz TerrorZone) Run(parameters *RunParameters) error {
 	case area.Travincal:
 		return NewTravincal().Run(parameters)
 	case area.DuranceOfHateLevel1:
-		return NewMephisto(tz.customTZEnemyFilter()).Run(parameters)
+		return NewMephisto(nil).Run(parameters)
 	case area.ChaosSanctuary:
 		return NewDiablo().Run(parameters)
 	case area.NihlathaksTemple:
 		return NewNihlathakTZ(tz.customTZEnemyFilter()).Run(parameters)
 	case area.TheWorldStoneKeepLevel1:
-		return NewBaal(tz.customTZEnemyFilter()).Run(parameters)
+		return NewBaal(nil).Run(parameters)
 	}
 
 	// --- Generic TZ handling via centralized routes ---
@@ -76,25 +77,22 @@ func (tz TerrorZone) Run(parameters *RunParameters) error {
 	}
 
 	for _, route := range routes {
-		for idx, step := range route {
+		for idx, routeStep := range route {
 			// Navigation: first step via waypoint, rest via MoveToArea
 			if idx == 0 {
-				if err := action.WayPoint(step.Area); err != nil {
+				if err := action.WayPoint(routeStep.Area); err != nil {
 					return err
 				}
 			} else {
-				if err := action.MoveToArea(step.Area); err != nil {
+				if err := action.MoveToArea(routeStep.Area); err != nil {
 					return err
 				}
 			}
 
 			// Clearing: only if the route explicitly says so.
 			// We trust routes.go + terrorzones.go to define the correct group.
-			if step.Kind == terrorzones.StepClear {
-				if err := action.ClearCurrentLevel(
-					tz.ctx.CharacterCfg.Game.TerrorZone.OpenChests,
-					tz.customTZEnemyFilter(),
-				); err != nil {
+			if routeStep.Kind == terrorzones.StepClear {
+				if err := action.ClearCurrentLevel(tz.ctx.CharacterCfg.Game.TerrorZone.OpenChests, step.MonsterClearLevelFilter()); err != nil {
 					return err
 				}
 			}

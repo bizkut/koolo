@@ -156,6 +156,13 @@ func MoveTo(dest data.Position, options ...MoveOption) error {
 		overrideClearPathDist = true
 	}
 
+	defer func() {
+		//Revert to not blocked when exiting
+		if ctx.CurrentGame.IsBlocked() {
+			ctx.CurrentGame.SetIsBlocked(false)
+		}
+	}()
+
 	for {
 		ctx.PauseIfNotPriority()
 		ctx.RefreshGameData()
@@ -218,9 +225,6 @@ func MoveTo(dest data.Position, options ...MoveOption) error {
 			monsterFound := false
 
 			for _, m := range ctx.Data.Monsters.Enemies(opts.monsterFilters...) {
-				if ctx.Char.ShouldIgnoreMonster(m) {
-					continue
-				}
 				//Check distance first as it is cheaper
 				distanceToMonster := ctx.PathFinder.DistanceFromMe(m.Position)
 				if distanceToMonster <= clearPathDist {
@@ -269,6 +273,11 @@ func MoveTo(dest data.Position, options ...MoveOption) error {
 		} else {
 			//Player moved, reset stuck detection timer
 			stuckCheckStartTime = time.Now()
+		}
+
+		//Update blocked state
+		if ctx.CurrentGame.IsBlocked() != blocked {
+			ctx.CurrentGame.SetIsBlocked(blocked)
 		}
 
 		if blocked {

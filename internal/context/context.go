@@ -82,6 +82,7 @@ type CurrentGameHelper struct {
 	}
 	PickupItems                bool
 	IsPickingItems             bool
+	isBlocked                  bool
 	FailedToCreateGameAttempts int
 	FailedMenuAttempts         int
 	// When this is set, the supervisor will stop and the manager will start a new supervisor for the specified character.
@@ -209,6 +210,16 @@ func (ctx *Context) SetPickingItems(value bool) {
 	ctx.CurrentGame.mutex.Lock()
 	ctx.CurrentGame.IsPickingItems = value
 	ctx.CurrentGame.mutex.Unlock()
+}
+
+func (gameHelper *CurrentGameHelper) SetIsBlocked(value bool) {
+	gameHelper.mutex.Lock()
+	gameHelper.isBlocked = value
+	gameHelper.mutex.Unlock()
+}
+
+func (gameHelper *CurrentGameHelper) IsBlocked() bool {
+	return gameHelper.isBlocked
 }
 
 func (s *Status) PauseIfNotPriority() {

@@ -1,11 +1,11 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/d2go/pkg/data/stat"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -74,7 +74,7 @@ func (a TalRashaTombs) Run(parameters *RunParameters) error {
 		}
 
 		// Clear the Tomb
-		if err = action.ClearCurrentLevelEx(true, data.MonsterAnyFilter(), shouldInterrupt); err != nil {
+		if err = action.ClearCurrentLevelEx(true, step.MonsterClearLevelFilter(), shouldInterrupt); err != nil {
 			return err
 		}
 

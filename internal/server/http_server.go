@@ -1210,6 +1210,13 @@ func (s *HttpServer) characterSettings(w http.ResponseWriter, r *http.Request) {
 			cfg.Character.ClearPathDist = 7
 		}
 
+		cfg.Character.SkipOnImmunities = []stat.Resist{}
+		for _, i := range r.Form["gameCharacterSkipOnImmunities[]"] {
+			cfg.Character.SkipOnImmunities = append(cfg.Character.SkipOnImmunities, stat.Resist(i))
+		}
+		cfg.Character.ClearLevelFocusElites = r.Form.Has("gameCharacterClearLevelFocusElites")
+		cfg.Character.NavigationFocusElites = r.Form.Has("gameCharacterNavigationFocusElites")
+
 		// Berserker Barb specific options
 		if cfg.Character.Class == "berserker" {
 			cfg.Character.BerserkerBarb.SkipPotionPickupInTravincal = r.Form.Has("barbSkipPotionPickupInTravincal")

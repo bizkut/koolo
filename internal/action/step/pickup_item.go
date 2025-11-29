@@ -173,7 +173,7 @@ func hasHostileMonstersNearby(pos data.Position) bool {
 	ctx := context.Get()
 
 	for _, monster := range ctx.Data.Monsters.Enemies() {
-		if monster.Stats[stat.Life] > 0 && pather.DistanceFromPoint(pos, monster.Position) <= 4 {
+		if monster.Stats[stat.Life] > 0 && pather.DistanceFromPoint(pos, monster.Position) <= 4 && !ShouldIgnoreMonster(monster, false) {
 			return true
 		}
 	}

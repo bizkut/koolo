@@ -1,10 +1,10 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -35,12 +35,7 @@ func (a AncientTunnels) CheckConditions(parameters *RunParameters) SequencerResu
 
 func (a AncientTunnels) Run(parameters *RunParameters) error {
 	openChests := a.ctx.CharacterCfg.Game.AncientTunnels.OpenChests
-	onlyElites := a.ctx.CharacterCfg.Game.AncientTunnels.FocusOnElitePacks
-	filter := data.MonsterAnyFilter()
-
-	if onlyElites {
-		filter = data.MonsterEliteFilter()
-	}
+	filter := step.MonsterClearLevelFilter()
 
 	err := action.WayPoint(area.LostCity) // Moving to starting point (Lost City)
 	if err != nil {

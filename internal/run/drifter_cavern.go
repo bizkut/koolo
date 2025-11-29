@@ -1,10 +1,10 @@
 package run
 
 import (
-	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/koolo/internal/action"
+	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 )
@@ -35,12 +35,7 @@ func (a DrifterCavern) CheckConditions(parameters *RunParameters) SequencerResul
 
 func (s DrifterCavern) Run(parameters *RunParameters) error {
 	// Define a default monster filter
-	monsterFilter := data.MonsterAnyFilter()
-
-	// Update filter if we selected to clear only elites
-	if s.ctx.CharacterCfg.Game.DrifterCavern.FocusOnElitePacks {
-		monsterFilter = data.MonsterEliteFilter()
-	}
+	monsterFilter := step.MonsterClearLevelFilter()
 
 	// Use the waypoint
 	err := action.WayPoint(area.GlacialTrail)

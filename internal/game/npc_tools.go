@@ -17,8 +17,8 @@ func IsActBoss(m data.Monster) bool {
 	return false
 }
 
-func IsMonsterSealElite(monster data.Monster) bool {
-	return monster.Type == data.MonsterTypeSuperUnique && (monster.Name == npc.OblivionKnight || monster.Name == npc.VenomLord || monster.Name == npc.StormCaster)
+func IsMonsterSealElite(m data.Monster) bool {
+	return m.Type == data.MonsterTypeSuperUnique && (m.Name == npc.OblivionKnight || m.Name == npc.VenomLord || m.Name == npc.StormCaster)
 }
 
 func IsQuestEnemy(m data.Monster) bool {
