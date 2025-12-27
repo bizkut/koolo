@@ -45,9 +45,45 @@
                 </button>
             </div>
         </div>
+        <!-- Logs Panel -->
+        <div id="logs-panel" class="logs-panel">
+            <div class="logs-header" onclick="toggleLogsPanel()">
+                <div class="logs-header-left">
+                    <i class="bi bi-journal-text"></i>
+                    <span>Live Logs</span>
+                    <span class="log-count" id="log-count">0</span>
+                </div>
+                <button class="toggle-logs-btn">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="logs-content" style="display: none;">
+                <div class="logs-tabs" id="logs-tabs">
+                    <button class="log-tab active" data-source="koolo">Koolo</button>
+                </div>
+                <div class="logs-controls">
+                    <input type="text" class="log-search" id="log-search" placeholder="Filter logs..." oninput="filterLogs()">
+                    <button class="btn btn-outline btn-sm" onclick="clearLogs()" title="Clear Logs">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <div class="log-filters">
+                        <label><input type="checkbox" value="INFO" checked onclick="updateLogFilters()"> Info</label>
+                        <label><input type="checkbox" value="WARN" checked onclick="updateLogFilters()"> Warn</label>
+                        <label><input type="checkbox" value="ERROR" checked onclick="updateLogFilters()"> Error</label>
+                        <label><input type="checkbox" value="DEBUG" checked onclick="updateLogFilters()"> Debug</label>
+                    </div>
+                    <label class="autoscroll-toggle">
+                        <input type="checkbox" id="logs-autoscroll" checked>
+                        <span>Auto-scroll</span>
+                    </label>
+                </div>
+                <div class="logs-output" id="logs-output"></div>
+            </div>
+        </div>
         <div id="characters-container"></div>
     </div>
 </main>
 <script src="../assets/js/dashboard.js"></script>
+<script src="../assets/js/logs.js"></script>
 </body>
 </html>

@@ -13,6 +13,11 @@ function connectWebSocket() {
 
   socket.onmessage = function (event) {
     const data = JSON.parse(event.data);
+    // Route log messages to log handler
+    if (data.type === 'log' && typeof handleLogMessage === 'function') {
+      handleLogMessage(data);
+      return;
+    }
     updateDashboard(data);
   };
 

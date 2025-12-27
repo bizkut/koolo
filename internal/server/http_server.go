@@ -63,6 +63,7 @@ type HttpServer struct {
 	DropMux             sync.Mutex
 	RunewordMux         sync.Mutex
 	autoStartPromptOnce sync.Once
+	LogBufferManager    *LogBufferManager
 }
 
 var (
@@ -268,13 +269,14 @@ func New(logger *slog.Logger, manager *bot.SupervisorManager) (*HttpServer, erro
 	}
 
 	server := &HttpServer{
-		logger:       logger,
-		manager:      manager,
-		templates:    templates,
-		pickitAPI:    NewPickitAPI(),
-		sequenceAPI:  NewSequenceAPI(logger),
-		DropFilters:  make(map[string]drop.Filters),
-		DropCardInfo: make(map[string]dropCardInfo),
+		logger:           logger,
+		manager:          manager,
+		templates:        templates,
+		pickitAPI:        NewPickitAPI(),
+		sequenceAPI:      NewSequenceAPI(logger),
+		DropFilters:      make(map[string]drop.Filters),
+		DropCardInfo:     make(map[string]dropCardInfo),
+		LogBufferManager: NewLogBufferManager(1000),
 	}
 
 	server.initDropCallbacks()
@@ -650,6 +652,7 @@ func (s *HttpServer) Listen(port int) error {
 	s.wsServer = NewWebSocketServer()
 	go s.wsServer.Run()
 	go s.BroadcastStatus()
+	go s.BroadcastLogs()
 
 	http.HandleFunc("/", s.getRoot)
 	http.HandleFunc("/config", s.config)
@@ -673,9 +676,11 @@ func (s *HttpServer) Listen(port int) error {
 	http.HandleFunc("/reset-droplogs", s.resetDroplogs)
 	http.HandleFunc("/process-list", s.getProcessList)
 	http.HandleFunc("/attach-process", s.attachProcess)
-	http.HandleFunc("/ws", s.wsServer.HandleWebSocket)      // Web socket
-	http.HandleFunc("/initial-data", s.initialData)         // Web socket data
-	http.HandleFunc("/api/reload-config", s.reloadConfig)   // New handler
+	http.HandleFunc("/ws", s.wsServer.HandleWebSocket)    // Web socket
+	http.HandleFunc("/initial-data", s.initialData)       // Web socket data
+	http.HandleFunc("/api/reload-config", s.reloadConfig) // New handler
+	http.HandleFunc("/api/logs", s.getLogs)
+	http.HandleFunc("/api/logs/sources", s.getLogSources)
 	http.HandleFunc("/api/companion-join", s.companionJoin) // Companion join handler
 	http.HandleFunc("/reset-muling", s.resetMuling)
 

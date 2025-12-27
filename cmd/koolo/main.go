@@ -63,7 +63,16 @@ func main() {
 		config.Koolo.AutoStart.DelaySeconds = 60
 	}
 
-	logger, err := sloggger.NewLogger(config.Koolo.Debug.Log, config.Koolo.LogSaveDirectory, "")
+	// Channel to buffer logs until server is ready
+	logChan := make(chan sloggger.LogEntry, 1000)
+	logCallback := func(entry sloggger.LogEntry) {
+		select {
+		case logChan <- entry:
+		default:
+		}
+	}
+
+	logger, err := sloggger.NewLoggerWithCallback(config.Koolo.Debug.Log, config.Koolo.LogSaveDirectory, "", logCallback)
 	if err != nil {
 		log.Fatalf("Error starting logger: %s", err.Error())
 	}
@@ -96,12 +105,28 @@ func main() {
 	dropWriter := droplog.NewWriter(dropDir, logger)
 	eventListener.Register(dropWriter.Handle)
 	manager := bot.NewSupervisorManager(logger, eventListener)
+	manager.SetLogCallback(logCallback)
+
 	scheduler := bot.NewScheduler(manager, logger)
 	go scheduler.Start()
 	srv, err := server.New(logger, manager)
 	if err != nil {
 		log.Fatalf("Error starting local server: %s", err.Error())
 	}
+
+	// Start log bridge
+	g.Go(wrapWithRecover(logger, func() error {
+		for entry := range logChan {
+			srv.AddLog(server.LogEntry{
+				Timestamp: entry.Timestamp,
+				Level:     entry.Level,
+				Message:   entry.Message,
+				Source:    entry.Source,
+			})
+		}
+		return nil
+	}))
+
 	eventListener.Register(srv.HandleRunewordHistory)
 
 	g.Go(wrapWithRecover(logger, func() error {

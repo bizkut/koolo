@@ -28,7 +28,8 @@ type SupervisorManager struct {
 	supervisors    map[string]Supervisor
 	crashDetectors map[string]*game.CrashDetector
 	eventListener  *event.Listener
-	Drop           *drop.Service // Drop: Service façade to manage Drop domain
+	Drop           *drop.Service      // Drop: Service façade to manage Drop domain
+	logCallback    func(log.LogEntry) // Callback for live log streaming
 }
 
 func NewSupervisorManager(logger *slog.Logger, eventListener *event.Listener) *SupervisorManager {
@@ -65,7 +66,7 @@ func (mng *SupervisorManager) Start(supervisorName string, attachToExisting bool
 		return fmt.Errorf("error loading config: %w", err)
 	}
 
-	supervisorLogger, err := log.NewLogger(config.Koolo.Debug.Log, config.Koolo.LogSaveDirectory, supervisorName)
+	supervisorLogger, err := log.NewLoggerWithCallback(config.Koolo.Debug.Log, config.Koolo.LogSaveDirectory, supervisorName, mng.logCallback)
 	if err != nil {
 		return err
 	}
@@ -420,6 +421,11 @@ func (mng *SupervisorManager) GetSupervisorStats(supervisor string) Stats {
 		return Stats{}
 	}
 	return mng.supervisors[supervisor].Stats()
+}
+
+// SetLogCallback sets the callback function for live log streaming
+func (mng *SupervisorManager) SetLogCallback(callback func(log.LogEntry)) {
+	mng.logCallback = callback
 }
 
 func (mng *SupervisorManager) rearrangeWindows() {

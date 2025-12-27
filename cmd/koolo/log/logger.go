@@ -27,6 +27,11 @@ func FlushAndClose() error {
 }
 
 func NewLogger(debug bool, logDir, supervisor string) (*slog.Logger, error) {
+	return NewLoggerWithCallback(debug, logDir, supervisor, nil)
+}
+
+// NewLoggerWithCallback creates a logger with an optional callback for log entries
+func NewLoggerWithCallback(debug bool, logDir, supervisor string, callback func(LogEntry)) (*slog.Logger, error) {
 	if logDir == "" {
 		logDir = "logs"
 	}
@@ -39,13 +44,21 @@ func NewLogger(debug bool, logDir, supervisor string) (*slog.Logger, error) {
 	}
 
 	fileName := "Koolo-log-" + time.Now().Format("2006-01-02-15-04-05") + ".txt"
+	source := "koolo"
 	if supervisor != "" {
 		fileName = fmt.Sprintf("Supervisor-log-%s-%s.txt", supervisor, time.Now().Format("2006-01-02-15-04-05"))
+		source = supervisor
 	}
 
 	lfh, err := os.Create(logDir + "/" + fileName)
 	if err != nil {
 		return nil, err
+	}
+
+	// Close previous log file handler if exists to prevent leak
+	if logFileHandler != nil {
+		logFileHandler.Sync()
+		logFileHandler.Close()
 	}
 	logFileHandler = lfh
 
@@ -67,7 +80,14 @@ func NewLogger(debug bool, logDir, supervisor string) (*slog.Logger, error) {
 			return a
 		},
 	}
-	handler := slog.NewTextHandler(io.MultiWriter(logFileHandler, os.Stdout), opts)
+
+	var handler slog.Handler
+	handler = slog.NewTextHandler(io.MultiWriter(logFileHandler, os.Stdout), opts)
+
+	// Wrap with buffer handler if callback is provided
+	if callback != nil {
+		handler = NewBufferHandler(handler, source, callback)
+	}
 
 	return slog.New(handler), nil
 }
