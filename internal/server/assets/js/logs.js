@@ -1,11 +1,19 @@
 // Live Logs System
 (function () {
-    const MAX_LOG_ENTRIES = 500;
-    let logEntries = [];
+    const MAX_LOG_ENTRIES_PER_SOURCE = 500;
+    let logEntriesBySource = new Map(); // Per-source log storage
     let currentSource = 'koolo';
     let activeFilters = ['INFO', 'WARN', 'ERROR', 'DEBUG'];
     let searchFilter = '';
     let knownSources = new Set(['koolo']);
+
+    // Get or create log array for a source
+    function getSourceLogs(source) {
+        if (!logEntriesBySource.has(source)) {
+            logEntriesBySource.set(source, []);
+        }
+        return logEntriesBySource.get(source);
+    }
 
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function () {
@@ -53,14 +61,16 @@
     };
 
     function addLogEntry(entry, render = true) {
-        logEntries.push(entry);
+        const source = entry.source || 'koolo';
+        const sourceLogs = getSourceLogs(source);
+        sourceLogs.push(entry);
 
-        // Trim old entries
-        if (logEntries.length > MAX_LOG_ENTRIES) {
-            logEntries = logEntries.slice(-MAX_LOG_ENTRIES);
+        // Trim old entries for THIS source only
+        if (sourceLogs.length > MAX_LOG_ENTRIES_PER_SOURCE) {
+            logEntriesBySource.set(source, sourceLogs.slice(-MAX_LOG_ENTRIES_PER_SOURCE));
         }
 
-        if (render && entry.source === currentSource) {
+        if (render && source === currentSource) {
             appendLogToDOM(entry);
             updateLogCount();
         }
@@ -97,8 +107,8 @@
 
         output.innerHTML = '';
 
-        const filtered = logEntries.filter(e =>
-            e.source === currentSource &&
+        const sourceLogs = getSourceLogs(currentSource);
+        const filtered = sourceLogs.filter(e =>
             activeFilters.includes(e.level.toUpperCase()) &&
             (searchFilter === '' || e.message.toLowerCase().includes(searchFilter.toLowerCase()))
         );
@@ -131,7 +141,7 @@
         output.appendChild(div);
 
         // Limit DOM entries
-        while (output.children.length > MAX_LOG_ENTRIES) {
+        while (output.children.length > MAX_LOG_ENTRIES_PER_SOURCE) {
             output.removeChild(output.firstChild);
         }
 
@@ -143,8 +153,8 @@
     function updateLogCount() {
         const countEl = document.getElementById('log-count');
         if (countEl) {
-            const count = logEntries.filter(e => e.source === currentSource).length;
-            countEl.textContent = count;
+            const sourceLogs = getSourceLogs(currentSource);
+            countEl.textContent = sourceLogs.length;
         }
     }
 
@@ -165,7 +175,7 @@
     };
 
     window.clearLogs = function () {
-        logEntries = logEntries.filter(e => e.source !== currentSource);
+        logEntriesBySource.set(currentSource, []);
         renderLogs();
     };
 
