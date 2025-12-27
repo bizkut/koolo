@@ -231,7 +231,7 @@ func (a Leveling) AdjustDifficultyConfig() {
 	a.ensureDifficultySwitchSettings()
 
 	a.ctx.CharacterCfg.Game.RunewordMaker.EnabledRecipes = a.GetRunewords()
-	a.ctx.CharacterCfg.Game.MinGoldPickupThreshold = 5000 * lvl.Value
+	a.ctx.CharacterCfg.Game.MinGoldPickupThreshold = 5000
 	if lvl.Value >= 4 && lvl.Value < 24 {
 		a.ctx.CharacterCfg.Health.HealingPotionAt = 85
 		a.ctx.CharacterCfg.Health.TownChickenAt = 25
@@ -249,16 +249,22 @@ func (a Leveling) AdjustDifficultyConfig() {
 			a.ctx.CharacterCfg.Character.ClearPathDist = 15
 
 		case difficulty.Nightmare:
-			a.ctx.CharacterCfg.Inventory.BeltColumns = [4]string{"healing", "healing", "mana", "mana"}
-			a.ctx.CharacterCfg.Health.MercHealingPotionAt = 55
-			a.ctx.CharacterCfg.Health.MercRejuvPotionAt = 0
+			a.ctx.CharacterCfg.Inventory.BeltColumns = [4]string{"healing", "mana", "rejuvenation", "rejuvenation"}
+			a.ctx.CharacterCfg.Health.MercHealingPotionAt = 80
+			a.ctx.CharacterCfg.Health.MercRejuvPotionAt = 30
 			a.ctx.CharacterCfg.Health.HealingPotionAt = 85
-			a.ctx.CharacterCfg.Health.ChickenAt = 30
+			a.ctx.CharacterCfg.Health.ChickenAt = 45
+			a.ctx.CharacterCfg.Health.RejuvPotionAtLife = 60
+			a.ctx.CharacterCfg.Health.RejuvPotionAtMana = 25
+			a.ctx.CharacterCfg.Health.ManaPotionAt = 50
 			a.ctx.CharacterCfg.Health.TownChickenAt = 50
 			a.ctx.CharacterCfg.Character.ClearPathDist = 15
+			a.ctx.CharacterCfg.Inventory.HealingPotionCount = 5
+			a.ctx.CharacterCfg.Inventory.ManaPotionCount = 5
+			a.ctx.CharacterCfg.Inventory.RejuvPotionCount = 10
 
 		case difficulty.Hell:
-			a.ctx.CharacterCfg.Inventory.BeltColumns = [4]string{"healing", "healing", "mana", "rejuvenation"}
+			a.ctx.CharacterCfg.Inventory.BeltColumns = [4]string{"healing", "mana", "rejuvenation", "rejuvenation"}
 			a.ctx.CharacterCfg.Health.MercHealingPotionAt = 80
 			a.ctx.CharacterCfg.Health.MercRejuvPotionAt = 40
 			a.ctx.CharacterCfg.Health.HealingPotionAt = 90
@@ -266,7 +272,9 @@ func (a Leveling) AdjustDifficultyConfig() {
 			a.ctx.CharacterCfg.Health.ChickenAt = 40
 			a.ctx.CharacterCfg.Health.TownChickenAt = 60
 			a.ctx.CharacterCfg.Character.ClearPathDist = 15
-			a.ctx.CharacterCfg.Inventory.ManaPotionCount = 4
+			a.ctx.CharacterCfg.Inventory.HealingPotionCount = 5
+			a.ctx.CharacterCfg.Inventory.ManaPotionCount = 5
+			a.ctx.CharacterCfg.Inventory.RejuvPotionCount = 10
 		}
 	}
 
@@ -281,7 +289,7 @@ func (a Leveling) AdjustDifficultyConfig() {
 }
 
 func (a Leveling) GetRunewords() []string {
-	enabledRunewordRecipes := []string{"Ancients' Pledge", "Lore", "Insight", "Smoke", "Treachery", "Call to Arms"}
+	enabledRunewordRecipes := []string{"Ancients' Pledge", "Lore", "Insight", "Smoke", "Treachery", "Call to Arms", "Spirit", "Rhyme"}
 
 	if !a.ctx.CharacterCfg.Game.IsNonLadderChar {
 		enabledRunewordRecipes = append(enabledRunewordRecipes, "Bulwark", "Hustle")
