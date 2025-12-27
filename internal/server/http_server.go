@@ -1920,6 +1920,7 @@ func (s *HttpServer) characterSettings(w http.ResponseWriter, r *http.Request) {
 			cfg.CharacterName = v
 		}
 		cfg.Game.RunewordMaker.Enabled = r.Form.Has("runewordMakerEnabled")
+
 		cfg.AutoCreateCharacter = r.Form.Has("autoCreateCharacter")
 		cfg.Username = r.Form.Get("username")
 		cfg.Password = r.Form.Get("password")

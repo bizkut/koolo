@@ -116,15 +116,22 @@ func main() {
 
 	// Start log bridge
 	g.Go(wrapWithRecover(logger, func() error {
-		for entry := range logChan {
-			srv.AddLog(server.LogEntry{
-				Timestamp: entry.Timestamp,
-				Level:     entry.Level,
-				Message:   entry.Message,
-				Source:    entry.Source,
-			})
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case entry, ok := <-logChan:
+				if !ok {
+					return nil
+				}
+				srv.AddLog(server.LogEntry{
+					Timestamp: entry.Timestamp,
+					Level:     entry.Level,
+					Message:   entry.Message,
+					Source:    entry.Source,
+				})
+			}
 		}
-		return nil
 	}))
 
 	eventListener.Register(srv.HandleRunewordHistory)
@@ -262,6 +269,7 @@ func main() {
 		cancel()
 		manager.StopAll()
 		scheduler.Stop()
+		close(logChan) // Close log channel to signal log bridge to exit
 		err = srv.Stop()
 		if err != nil {
 			logger.Error("error stopping local server", slog.Any("error", err))

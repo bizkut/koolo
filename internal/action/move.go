@@ -90,8 +90,8 @@ func ensureAreaSync(ctx *context.Status, expectedArea area.ID) error {
 
 		if ctx.Data.PlayerUnit.Area == expectedArea {
 			// Area ID matches, now verify collision data is loaded
-			if ctx.Data.AreaData.Grid != nil && 
-				ctx.Data.AreaData.Grid.CollisionGrid != nil && 
+			if ctx.Data.AreaData.Grid != nil &&
+				ctx.Data.AreaData.Grid.CollisionGrid != nil &&
 				len(ctx.Data.AreaData.Grid.CollisionGrid) > 0 {
 				// Additional check: ensure we have adjacent level data if this is a cross-area operation
 				// Give it one more refresh cycle to ensure all data is populated
@@ -417,6 +417,7 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 	var distanceToTarget int
 	var pathFound bool
 	var pathErrors int
+	var stuckRetries int // Counter for stuck/round-trip errors
 	var stuck bool
 	blacklistedInteractions := map[data.UnitID]bool{}
 	adjustMinDist := false
@@ -658,6 +659,13 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 			if errors.Is(moveErr, step.ErrMonstersInPath) {
 				continue
 			} else if errors.Is(moveErr, step.ErrPlayerStuck) || errors.Is(moveErr, step.ErrPlayerRoundTrip) {
+				stuckRetries++
+				if stuckRetries > 5 {
+					ctx.Logger.Warn("Too many stuck/round-trip errors, aborting movement",
+						slog.Int("retries", stuckRetries),
+						slog.String("area", ctx.Data.PlayerUnit.Area.Area().Name))
+					return moveErr
+				}
 				if (!ctx.Data.CanTeleport() || stuck) || ctx.Data.PlayerUnit.Area.IsTown() {
 					ctx.PathFinder.RandomMovement()
 					time.Sleep(time.Millisecond * 200)

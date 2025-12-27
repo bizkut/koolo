@@ -19,13 +19,16 @@ func InteractNPC(npc npc.ID) error {
 	ctx := context.Get()
 	ctx.SetLastAction("InteractNPC")
 
-	pos, found := getNPCPosition(npc, ctx.Data)
-	if !found {
-		return fmt.Errorf("npc with ID %d not found", npc)
-	}
-
 	var err error
 	for range 5 {
+		// Refresh NPC position on each attempt since NPCs can move
+		ctx.RefreshGameData()
+		pos, found := getNPCPosition(npc, ctx.Data)
+		if !found {
+			err = fmt.Errorf("npc with ID %d not found", npc)
+			continue
+		}
+
 		err = MoveToCoords(pos)
 		if err != nil {
 			continue

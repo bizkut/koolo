@@ -76,6 +76,10 @@ func (s *baseSupervisor) TogglePause() {
 
 func (s *baseSupervisor) Stop() {
 	s.bot.ctx.Logger.Info("Stopping...", slog.String("configuration", s.name))
+
+	// Mark as cleanly stopped to prevent restart by crash detector
+	s.bot.ctx.CleanStopRequested = true
+
 	if s.cancelFn != nil {
 		s.cancelFn()
 	}

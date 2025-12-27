@@ -130,7 +130,8 @@ func SocketItems(ctx *context.Status, recipe Runeword, base data.Item, items ...
 		ctx.Logger.Debug("Base in stash - checking it fits")
 		if !itemFitsInventory(base) {
 			ctx.Logger.Error("Base item does not fit in inventory", "item", base.Name)
-			return step.CloseAllMenus()
+			step.CloseAllMenus()
+			return fmt.Errorf("base item %s does not fit in inventory", base.Name)
 		}
 
 		if base.Location.LocationType == item.LocationSharedStash {
@@ -143,7 +144,7 @@ func SocketItems(ctx *context.Status, recipe Runeword, base data.Item, items ...
 		ctx.Logger.Debug("Switched to correct tab")
 		utils.Sleep(500)
 		screenPos := ui.GetScreenCoordsForItem(base)
-		ctx.Logger.Debug(fmt.Sprintf("Clicking after 5s at %d:%d", screenPos.X, screenPos.Y))
+		ctx.Logger.Debug(fmt.Sprintf("Moving base item from stash at screen coords %d:%d", screenPos.X, screenPos.Y))
 		moveSucceeded := false
 		for attempt := 0; attempt < 2; attempt++ {
 			ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
@@ -158,7 +159,8 @@ func SocketItems(ctx *context.Status, recipe Runeword, base data.Item, items ...
 		}
 		if !moveSucceeded {
 			ctx.Logger.Error("Failed to move base item from stash to inventory", "item", base.Name)
-			return step.CloseAllMenus()
+			step.CloseAllMenus()
+			return fmt.Errorf("failed to move base item %s from stash to inventory", base.Name)
 		}
 	}
 

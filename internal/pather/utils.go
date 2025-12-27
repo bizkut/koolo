@@ -238,7 +238,13 @@ func (pf *PathFinder) MoveCharacter(x, y int, gamePos ...data.Position) {
 		}
 	} else {
 		pf.hid.MovePointer(x, y)
-		pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
+		// If in town, use Left Click to move (fallback for users without Force Move bound)
+		// In combat areas, we must use Force Move to avoid attacking monsters by accident
+		if pf.data.PlayerUnit.Area.IsTown() {
+			pf.hid.Click(game.LeftButton, x, y)
+		} else {
+			pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
+		}
 		utils.Sleep(50)
 	}
 }

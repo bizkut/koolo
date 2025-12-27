@@ -85,11 +85,11 @@ type Day struct {
 
 // RunewordOverrideConfig stores a character's overrides keyed by the display name (e.g. "Enigma").
 type RunewordOverrideConfig struct {
-	EthMode       string                       `yaml:"ethMode,omitempty"`       // "any", "eth", "noneth"
-	QualityMode   string                       `yaml:"qualityMode,omitempty"`   // "any", "normal", "superior"
-	BaseType      string                       `yaml:"baseType,omitempty"`      // armor, bow, polearm, etc.
-	BaseTier      string                       `yaml:"baseTier,omitempty"`      // "", "normal", "exceptional", "elite"
-	BaseName      string                       `yaml:"baseName,omitempty"`      // optional specific base name
+	EthMode     string `yaml:"ethMode,omitempty"`     // "any", "eth", "noneth"
+	QualityMode string `yaml:"qualityMode,omitempty"` // "any", "normal", "superior"
+	BaseType    string `yaml:"baseType,omitempty"`    // armor, bow, polearm, etc.
+	BaseTier    string `yaml:"baseTier,omitempty"`    // "", "normal", "exceptional", "elite"
+	BaseName    string `yaml:"baseName,omitempty"`    // optional specific base name
 }
 
 // RunewordTargetStatOverride captures the desired min/max for a stat (and optional layer) when rerolling.
@@ -370,16 +370,16 @@ type CharacterCfg struct {
 			OpenChests        bool          `yaml:"openChests"`
 		} `yaml:"terror_zone"`
 		Leveling struct {
-			EnsurePointsAllocation   bool     `yaml:"ensurePointsAllocation"`
-			EnsureKeyBinding         bool     `yaml:"ensureKeyBinding"`
-			AutoEquip                bool     `yaml:"autoEquip"`
-			AutoEquipFromSharedStash bool     `yaml:"autoEquipFromSharedStash"`
-			EnableRunewordMaker       bool     `yaml:"enableRunewordMaker"`
-			NightmareRequiredLevel    int      `yaml:"nightmareRequiredLevel"`
-			HellRequiredLevel         int      `yaml:"hellRequiredLevel"`
-			HellRequiredFireRes       int      `yaml:"hellRequiredFireRes"`
-			HellRequiredLightRes      int      `yaml:"hellRequiredLightRes"`
-			EnabledRunewordRecipes    []string `yaml:"enabledRunewordRecipes"`
+			EnsurePointsAllocation   bool `yaml:"ensurePointsAllocation"`
+			EnsureKeyBinding         bool `yaml:"ensureKeyBinding"`
+			AutoEquip                bool `yaml:"autoEquip"`
+			AutoEquipFromSharedStash bool `yaml:"autoEquipFromSharedStash"`
+
+			NightmareRequiredLevel int      `yaml:"nightmareRequiredLevel"`
+			HellRequiredLevel      int      `yaml:"hellRequiredLevel"`
+			HellRequiredFireRes    int      `yaml:"hellRequiredFireRes"`
+			HellRequiredLightRes   int      `yaml:"hellRequiredLightRes"`
+			EnabledRunewordRecipes []string `yaml:"enabledRunewordRecipes"`
 		} `yaml:"leveling"`
 		RunewordMaker struct {
 			Enabled        bool     `yaml:"enabled"`

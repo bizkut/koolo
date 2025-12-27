@@ -225,6 +225,12 @@ func (s *Status) PauseIfNotPriority() {
 			panic("Bot is stopped")
 		}
 
+		// Wait while paused - this allows the pause to be resumed properly
+		if s.ExecutionPriority == PriorityPause {
+			time.Sleep(time.Millisecond * 100)
+			continue
+		}
+
 		time.Sleep(time.Millisecond * 10)
 	}
 }
