@@ -32,7 +32,8 @@ func (d Data) CanTeleport() bool {
 	}
 
 	// Check if player has enough gold
-	if d.PlayerUnit.TotalPlayerGold() < 5000 {
+	// Exception: Allow teleport in Lower Kurast even with low gold since we're there specifically to farm gold
+	if d.PlayerUnit.TotalPlayerGold() < 5000 && d.PlayerUnit.Area != area.LowerKurast {
 		return false
 	}
 
