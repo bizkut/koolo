@@ -366,7 +366,6 @@ func isEquippable(newItem data.Item, bodyloc item.LocationType, target item.Loca
 		}
 
 		// If merc not found in monster list, we can't validate requirements
-		// Skip requirement checks but still allow equipping (merc might be dead/not spawned yet)
 		if !mercFound {
 			ctx.Logger.Debug("Mercenary not found in monster list, skipping stat requirement checks")
 			return true
@@ -379,6 +378,17 @@ func isEquippable(newItem data.Item, bodyloc item.LocationType, target item.Loca
 		if mercLvl < itemLevelReq {
 			ctx.Logger.Debug(fmt.Sprintf("Item %s requires level %d, merc is level %d", newItem.IdentifiedName, itemLevelReq, mercLvl))
 			return false
+		}
+
+		// Subtract stats from the currently equipped item in this slot
+		currentlyEquipped := GetMercEquippedItem(ctx.Data.Inventory, bodyloc)
+		if currentlyEquipped.UnitID != 0 {
+			if strBonus, found := currentlyEquipped.FindStat(stat.Strength, 0); found {
+				mercStr -= strBonus.Value
+			}
+			if dexBonus, found := currentlyEquipped.FindStat(stat.Dexterity, 0); found {
+				mercDex -= dexBonus.Value
+			}
 		}
 
 		if mercStr < newItem.Desc().RequiredStrength || mercDex < newItem.Desc().RequiredDexterity {
