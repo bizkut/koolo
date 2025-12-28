@@ -260,6 +260,11 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 		return false, false, "", ""
 	}
 
+	// Don't stash charms if Charm Manager is enabled - they are "equipped" in inventory
+	if ctx.CharacterCfg.CharmManager.Enabled && isCharmItem(i) {
+		return false, false, "", ""
+	}
+
 	// These items should NEVER be stashed, regardless of quest status, pickit rules, or first run.
 	fmt.Printf("DEBUG: Evaluating item '%s' for *absolute* exclusion from stash.\n", i.Name)
 	if i.Name == "horadricstaff" { // This is the simplest way given your logs

@@ -464,6 +464,10 @@ func getCharmScore(charm data.Item) float64 {
 		score += float64(mfStat.Value) * 1.5
 	}
 
+	if gfStat, found := charm.FindStat(stat.GoldFind, 0); found {
+		score += float64(gfStat.Value) * 0.5
+	}
+
 	if fhrStat, found := charm.FindStat(stat.FasterHitRecovery, 0); found {
 		score += float64(fhrStat.Value) * 1.0
 	}
