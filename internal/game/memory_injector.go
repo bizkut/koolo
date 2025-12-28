@@ -228,6 +228,15 @@ func (i *MemoryInjector) CursorOverrideActive() bool {
 	return i.isLoaded && i.cursorOverrideActive
 }
 
+// GetLastCursorPos returns the last known virtual cursor position
+// This is the position set by CursorPos() calls from MovePointer()
+func (i *MemoryInjector) GetLastCursorPos() (int, int) {
+	if i == nil {
+		return 0, 0
+	}
+	return i.lastCursorX, i.lastCursorY
+}
+
 // This is needed in order to let the game keep processing mouse events even if the mouse is not over the window
 func (i *MemoryInjector) stopTrackingMouseLeaveEvents() error {
 	err := windows.ReadProcessMemory(i.handle, i.trackMouseEventAddr, &i.trackMouseEventBytes[0], uintptr(len(i.trackMouseEventBytes)), nil)

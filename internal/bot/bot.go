@@ -234,6 +234,11 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 					b.ctx.HID.PressKey(b.ctx.Data.KeyBindings.Chat.Key1[0])
 					time.Sleep(150 * time.Millisecond)
 				}
+
+				// Check again for pause/stop before switching priority (prevents race condition with TogglePause)
+				if b.ctx.ExecutionPriority == botCtx.PriorityPause || b.ctx.ExecutionPriority == botCtx.PriorityStop {
+					continue
+				}
 				b.ctx.SwitchPriority(botCtx.PriorityHigh)
 
 				// Area correction (only check if enabled)
@@ -353,7 +358,11 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 						}
 					}
 				} // This closing brace was misplaced. It should be here, closing the outer 'if'.
-				b.ctx.SwitchPriority(botCtx.PriorityNormal)
+
+				// Only switch back to normal if not paused/stopped (prevents race condition with TogglePause)
+				if b.ctx.ExecutionPriority != botCtx.PriorityPause && b.ctx.ExecutionPriority != botCtx.PriorityStop {
+					b.ctx.SwitchPriority(botCtx.PriorityNormal)
+				}
 			}
 		}
 	})

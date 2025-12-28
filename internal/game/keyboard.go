@@ -43,12 +43,71 @@ func (hid *HID) PressKeyWithModifier(key byte, modifier ModifierKey) {
 
 func (hid *HID) PressKeyBinding(kb data.KeyBinding) {
 	keys := getKeysForKB(kb)
+
+	// Check if this is a mouse button binding (VK_LBUTTON=1, VK_RBUTTON=2, VK_MBUTTON=4, VK_XBUTTON1=5, VK_XBUTTON2=6)
+	// Mouse buttons cannot be sent as keyboard events, they need mouse messages
+	keyCode := keys[0]
+	if keyCode == win.VK_LBUTTON || keyCode == win.VK_RBUTTON || keyCode == win.VK_MBUTTON ||
+		keyCode == win.VK_XBUTTON1 || keyCode == win.VK_XBUTTON2 {
+		hid.pressMouseButton(keyCode)
+		return
+	}
+
 	if keys[1] == 0 || keys[1] == 255 {
 		hid.PressKey(keys[0])
 		return
 	}
 
 	hid.PressKeyWithModifier(keys[0], ModifierKey(keys[1]))
+}
+
+// pressMouseButton sends a mouse button click event to the game window
+func (hid *HID) pressMouseButton(button byte) {
+	// Skip when paused (cursor override disabled)
+	if !hid.gi.CursorOverrideActive() {
+		return
+	}
+
+	var buttonDown, buttonUp uint32
+	var wParam uintptr = 0
+
+	switch button {
+	case win.VK_LBUTTON: // 1
+		buttonDown = win.WM_LBUTTONDOWN
+		buttonUp = win.WM_LBUTTONUP
+		wParam = win.MK_LBUTTON
+	case win.VK_RBUTTON: // 2
+		buttonDown = win.WM_RBUTTONDOWN
+		buttonUp = win.WM_RBUTTONUP
+		wParam = win.MK_RBUTTON
+	case win.VK_MBUTTON: // 4
+		buttonDown = win.WM_MBUTTONDOWN
+		buttonUp = win.WM_MBUTTONUP
+		wParam = win.MK_MBUTTON
+	case win.VK_XBUTTON1: // 5
+		buttonDown = win.WM_XBUTTONDOWN
+		buttonUp = win.WM_XBUTTONUP
+		// For XBUTTON messages: LOWORD = key state flags, HIWORD = which X button (1 or 2)
+		wParam = uintptr(win.MK_XBUTTON1) | (1 << 16)
+	case win.VK_XBUTTON2: // 6
+		buttonDown = win.WM_XBUTTONDOWN
+		buttonUp = win.WM_XBUTTONUP
+		wParam = uintptr(win.MK_XBUTTON2) | (2 << 16)
+	default:
+		return
+	}
+
+	// Use the last known cursor position from the memory injector
+	// This is the virtual cursor position set by MovePointer()
+	cursorX, cursorY := hid.gi.GetLastCursorPos()
+	lParam := uintptr(cursorY<<16 | cursorX)
+
+	// Use SendMessage instead of PostMessage to match the behavior of Click()
+	// This ensures the input is processed synchronously
+	win.SendMessage(hid.gr.HWND, buttonDown, wParam, lParam)
+	sleepTime := rand.Intn(keyPressMaxTime-keyPressMinTime) + keyPressMinTime
+	time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+	win.SendMessage(hid.gr.HWND, buttonUp, wParam, lParam)
 }
 
 // KeyDown sends a key down event to the game window

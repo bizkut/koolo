@@ -62,7 +62,28 @@ func (s *baseSupervisor) Stats() Stats {
 
 func (s *baseSupervisor) TogglePause() {
 	if s.bot.ctx.ExecutionPriority == ct.PriorityPause {
-		s.bot.ctx.MemoryInjector.Load()
+		// Resuming from pause - first restore memory injection
+		s.bot.ctx.Logger.Debug("Resuming: Current state before Load()",
+			slog.Bool("isLoaded", s.bot.ctx.MemoryInjector.CursorOverrideActive()),
+			slog.Int("priority", int(s.bot.ctx.ExecutionPriority)))
+
+		if err := s.bot.ctx.MemoryInjector.Load(); err != nil {
+			s.bot.ctx.Logger.Error("Failed to load memory injector during resume", slog.String("error", err.Error()))
+			// Don't change priority if Load failed - bot would be broken
+			return
+		}
+
+		s.bot.ctx.Logger.Debug("Resuming: State after Load()",
+			slog.Bool("cursorOverrideActive", s.bot.ctx.MemoryInjector.CursorOverrideActive()))
+
+		// Explicitly enable cursor override after Load() to ensure it's active
+		if err := s.bot.ctx.MemoryInjector.EnableCursorOverride(); err != nil {
+			s.bot.ctx.Logger.Error("Failed to enable cursor override during resume", slog.String("error", err.Error()))
+		}
+
+		s.bot.ctx.Logger.Debug("Resuming: State after EnableCursorOverride()",
+			slog.Bool("cursorOverrideActive", s.bot.ctx.MemoryInjector.CursorOverrideActive()))
+
 		s.bot.ctx.SwitchPriority(ct.PriorityNormal)
 		s.bot.ctx.Logger.Info("Resuming...", slog.String("configuration", s.name))
 		event.Send(event.GamePaused(event.Text(s.name, "Game resumed"), false))
