@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	RightButton MouseButton = win.MK_RBUTTON
-	LeftButton  MouseButton = win.MK_LBUTTON
+	RightButton  MouseButton = win.MK_RBUTTON
+	LeftButton   MouseButton = win.MK_LBUTTON
+	MiddleButton MouseButton = win.MK_MBUTTON
 
 	ShiftKey ModifierKey = win.VK_SHIFT
 	CtrlKey  ModifierKey = win.VK_CONTROL
@@ -54,6 +55,9 @@ func (hid *HID) Click(btn MouseButton, x, y int) {
 	if btn == RightButton {
 		buttonDown = win.WM_RBUTTONDOWN
 		buttonUp = win.WM_RBUTTONUP
+	} else if btn == MiddleButton {
+		buttonDown = win.WM_MBUTTONDOWN
+		buttonUp = win.WM_MBUTTONUP
 	}
 
 	win.SendMessage(hid.gr.HWND, buttonDown, 1, lParam)

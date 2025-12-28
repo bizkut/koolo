@@ -30,7 +30,7 @@ func (pf *PathFinder) RandomMovement() {
 	if pf.data.PlayerUnit.Area.IsTown() {
 		pf.hid.Click(game.LeftButton, x, y)
 	} else {
-		pf.pressForceMove(x, y)
+		pf.hid.Click(game.MiddleButton, x, y)
 	}
 	utils.Sleep(100)
 }
@@ -77,7 +77,7 @@ func (pf *PathFinder) DirectionalMovement() bool {
 		if pf.data.PlayerUnit.Area.IsTown() {
 			pf.hid.Click(game.LeftButton, screenX, screenY)
 		} else {
-			pf.pressForceMove(screenX, screenY)
+			pf.hid.Click(game.MiddleButton, screenX, screenY)
 		}
 		utils.Sleep(150)
 		return true
@@ -338,7 +338,7 @@ func (pf *PathFinder) MoveCharacter(x, y int, gamePos ...data.Position) {
 		if pf.data.PlayerUnit.Area.IsTown() {
 			pf.hid.Click(game.LeftButton, x, y)
 		} else {
-			pf.pressForceMove(x, y)
+			pf.hid.Click(game.MiddleButton, x, y)
 		}
 		utils.Sleep(50)
 	}
