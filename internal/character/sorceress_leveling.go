@@ -1050,7 +1050,6 @@ func (s SorceressLeveling) InitialCharacterConfigSetup() {
 
 func (s SorceressLeveling) AdjustCharacterConfig() {
 	ctx := context.Get()
-	ctx.CharacterCfg.Character.UseTeleport = true
 
 	if ctx.CharacterCfg.Game.Difficulty == difficulty.Hell {
 		// don't engage when teleing and running oom
