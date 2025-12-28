@@ -262,14 +262,14 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 
 	// Don't stash charms if Charm Manager is enabled - but only keep the BEST of each type
 	if ctx.CharacterCfg.CharmManager.Enabled && isCharmItem(i) {
-		// Count and score all charms of the same type in inventory
-		itemType := i.Desc().Type
+		// Count and score all charms of the same type (by name) in inventory
+		itemName := string(i.Name)
 		var bestCharm data.Item
 		bestScore := -1.0
 		sameTypeCount := 0
 
 		for _, invItem := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
-			if isCharmItem(invItem) && invItem.Desc().Type == itemType {
+			if isCharmItem(invItem) && string(invItem.Name) == itemName {
 				sameTypeCount++
 				score := getCharmScore(invItem)
 				if score > bestScore {
@@ -279,11 +279,21 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 			}
 		}
 
+		ctx.Logger.Debug(fmt.Sprintf("CharmManager: Stash check for %s, sameTypeCount=%d, isBest=%v",
+			i.Name, sameTypeCount, i.UnitID == bestCharm.UnitID))
+
 		// If this is the only charm of its type, OR if this IS the best one, don't stash
 		if sameTypeCount == 1 || i.UnitID == bestCharm.UnitID {
+			ctx.Logger.Debug(fmt.Sprintf("CharmManager: Keeping charm %s in inventory (count=%d, isBest=%v)",
+				i.Name, sameTypeCount, i.UnitID == bestCharm.UnitID))
 			return false, false, "", ""
 		}
+		ctx.Logger.Debug(fmt.Sprintf("CharmManager: Stashing extra charm %s (score=%.1f, best=%.1f)",
+			i.Name, getCharmScore(i), bestScore))
 		// Otherwise, this is an "extra" charm that isn't the best - let it be stashed
+	} else if isCharmItem(i) {
+		ctx.Logger.Debug(fmt.Sprintf("CharmManager: Charm %s detected but CharmManager.Enabled=%v",
+			i.Name, ctx.CharacterCfg.CharmManager.Enabled))
 	}
 
 	// These items should NEVER be stashed, regardless of quest status, pickit rules, or first run.

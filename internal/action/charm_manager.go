@@ -23,11 +23,11 @@ type CharmScore struct {
 	StashTab int  // which stash tab (0-indexed) if in stash
 }
 
-// Charm type constants
+// Charm type constants - these match item.Name values
 const (
-	CharmTypeSmall = "scha" // Small Charm
-	CharmTypeLarge = "lcha" // Large Charm
-	CharmTypeGrand = "gcha" // Grand Charm
+	CharmTypeSmall = "smallcharm" // Small Charm
+	CharmTypeLarge = "largecharm" // Large Charm
+	CharmTypeGrand = "grandcharm" // Grand Charm
 )
 
 // Unique charm names that should always be kept
@@ -417,8 +417,8 @@ func getAllCharms() []CharmScore {
 
 // isCharmItem checks if an item is a charm
 func isCharmItem(itm data.Item) bool {
-	itemType := itm.Desc().Type
-	return itemType == CharmTypeSmall || itemType == CharmTypeLarge || itemType == CharmTypeGrand
+	itemName := string(itm.Name)
+	return itemName == CharmTypeSmall || itemName == CharmTypeLarge || itemName == CharmTypeGrand
 }
 
 // getCharmScore calculates a score for a charm based on its stats
