@@ -92,15 +92,6 @@ func OptimizeCharms() error {
 	stashCharms := make([]CharmScore, 0)
 
 	for _, sc := range allCharms {
-		// Skip protected charms from being moved
-		if isProtectedCharm(sc.Item) {
-			if !sc.InStash {
-				// Protected charms in inventory stay there
-				inventoryCharms = append(inventoryCharms, sc)
-			}
-			continue
-		}
-
 		if sc.InStash {
 			stashCharms = append(stashCharms, sc)
 		} else {
@@ -147,6 +138,10 @@ func findCharmSwaps(inventoryCharms, stashCharms []CharmScore) []CharmSwap {
 			}
 			// Skip locked slots
 			if IsInLockedInventorySlot(invCharm.Item) {
+				continue
+			}
+			// Skip protected charms (Skillers/Uniques) - never swap them out
+			if isProtectedCharm(invCharm.Item) {
 				continue
 			}
 			// Must be same charm type (size)
