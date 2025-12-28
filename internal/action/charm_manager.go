@@ -186,35 +186,143 @@ func executeCharmSwaps(swaps []CharmSwap) error {
 			getCharmName(swap.FromInventory.Item), swap.FromInventory.Score,
 			getCharmName(swap.FromStash.Item), swap.FromStash.Score))
 
-		// Step 1: Open stash
+		// Safety: Clear cursor before starting swap
+		if !clearCursorSafely() {
+			ctx.Logger.Error("CharmManager: Could not clear cursor, aborting swaps")
+			step.CloseAllMenus()
+			return fmt.Errorf("cursor not empty")
+		}
+
+		// Step 1: Open stash if not open
 		if !ctx.Data.OpenMenus.Stash {
 			if err := OpenStash(); err != nil {
 				ctx.Logger.Error(fmt.Sprintf("CharmManager: Failed to open stash: %v", err))
 				return err
 			}
 			utils.Sleep(300)
+			ctx.RefreshGameData()
 		}
 
-		// Step 2: Move inventory charm to stash (Ctrl+Click)
+		// Step 2: Switch to the correct stash tab
 		SwitchStashTab(swap.FromStash.StashTab + 1)
 		utils.Sleep(200)
 
-		invScreenPos := ui.GetScreenCoordsForItem(swap.FromInventory.Item)
+		// Step 3: Move inventory charm to stash (Ctrl+Click)
+		// Re-find the item in current inventory data to get fresh coordinates
+		var invItem data.Item
+		var foundInv bool
+		for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+			if itm.UnitID == swap.FromInventory.Item.UnitID {
+				invItem = itm
+				foundInv = true
+				break
+			}
+		}
+		if !foundInv {
+			ctx.Logger.Warn(fmt.Sprintf("CharmManager: Inventory charm %s no longer found, skipping swap", getCharmName(swap.FromInventory.Item)))
+			continue
+		}
+
+		invScreenPos := ui.GetScreenCoordsForItem(invItem)
 		ctx.HID.ClickWithModifier(game.LeftButton, invScreenPos.X, invScreenPos.Y, game.CtrlKey)
 		utils.Sleep(300)
 		ctx.RefreshGameData()
 
-		// Step 3: Move stash charm to inventory (Ctrl+Click)
-		stashScreenPos := ui.GetScreenCoordsForItem(swap.FromStash.Item)
+		// Safety: If item is on cursor (stash full?), put it back in inventory
+		if len(ctx.Data.Inventory.ByLocation(item.LocationCursor)) > 0 {
+			ctx.Logger.Warn("CharmManager: Item stuck on cursor after stash attempt, returning to inventory")
+			ctx.HID.Click(game.LeftButton, invScreenPos.X, invScreenPos.Y)
+			utils.Sleep(300)
+			ctx.RefreshGameData()
+			continue
+		}
+
+		// Verify inventory charm moved to stash
+		stillInInventory := false
+		for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+			if itm.UnitID == swap.FromInventory.Item.UnitID {
+				stillInInventory = true
+				break
+			}
+		}
+		if stillInInventory {
+			ctx.Logger.Warn(fmt.Sprintf("CharmManager: Failed to move %s to stash, skipping this swap", getCharmName(swap.FromInventory.Item)))
+			continue
+		}
+
+		// Step 4: Move stash charm to inventory (Ctrl+Click)
+		// Re-find the item in current stash data to get fresh coordinates
+		var stashItem data.Item
+		var foundStash bool
+		for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationStash, item.LocationSharedStash) {
+			if itm.UnitID == swap.FromStash.Item.UnitID {
+				stashItem = itm
+				foundStash = true
+				break
+			}
+		}
+		if !foundStash {
+			ctx.Logger.Warn(fmt.Sprintf("CharmManager: Stash charm %s no longer found, swap incomplete", getCharmName(swap.FromStash.Item)))
+			continue
+		}
+
+		stashScreenPos := ui.GetScreenCoordsForItem(stashItem)
 		ctx.HID.ClickWithModifier(game.LeftButton, stashScreenPos.X, stashScreenPos.Y, game.CtrlKey)
 		utils.Sleep(300)
 		ctx.RefreshGameData()
+
+		// Safety: If item is on cursor (inventory full?), put it back in stash
+		if len(ctx.Data.Inventory.ByLocation(item.LocationCursor)) > 0 {
+			ctx.Logger.Warn("CharmManager: Item stuck on cursor after inventory attempt, returning to stash")
+			ctx.HID.Click(game.LeftButton, stashScreenPos.X, stashScreenPos.Y)
+			utils.Sleep(300)
+			ctx.RefreshGameData()
+			continue
+		}
+
+		// Verify stash charm moved to inventory
+		nowInInventory := false
+		for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+			if itm.UnitID == swap.FromStash.Item.UnitID {
+				nowInInventory = true
+				break
+			}
+		}
+		if !nowInInventory {
+			ctx.Logger.Warn(fmt.Sprintf("CharmManager: Failed to move %s to inventory", getCharmName(swap.FromStash.Item)))
+		}
 	}
+
+	// Final safety: Ensure cursor is clear before closing
+	clearCursorSafely()
 
 	// Close stash when done
 	step.CloseAllMenus()
 
 	return nil
+}
+
+// clearCursorSafely ensures no item is on the cursor, with retry limit to prevent loops
+func clearCursorSafely() bool {
+	ctx := context.Get()
+	const maxRetries = 3
+
+	for i := 0; i < maxRetries; i++ {
+		ctx.RefreshGameData()
+		cursorItems := ctx.Data.Inventory.ByLocation(item.LocationCursor)
+		if len(cursorItems) == 0 {
+			return true // Cursor is clear
+		}
+
+		ctx.Logger.Warn(fmt.Sprintf("CharmManager: Item on cursor, attempting to clear (attempt %d/%d)", i+1, maxRetries))
+
+		// Try to drop the item safely
+		DropMouseItem()
+		utils.Sleep(500)
+	}
+
+	ctx.RefreshGameData()
+	return len(ctx.Data.Inventory.ByLocation(item.LocationCursor)) == 0
 }
 
 // getAllCharms returns all charms from inventory and stash with scores
@@ -265,23 +373,6 @@ func getAllCharms() []CharmScore {
 func isCharmItem(itm data.Item) bool {
 	itemType := itm.Desc().Type
 	return itemType == CharmTypeSmall || itemType == CharmTypeLarge || itemType == CharmTypeGrand
-}
-
-// getCharmsInInventory returns all charm items currently in the player's inventory
-func getCharmsInInventory() []data.Item {
-	ctx := context.Get()
-	charms := make([]data.Item, 0)
-
-	for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
-		itemType := itm.Desc().Type
-		if itemType == CharmTypeSmall || itemType == CharmTypeLarge || itemType == CharmTypeGrand {
-			if itm.Identified {
-				charms = append(charms, itm)
-			}
-		}
-	}
-
-	return charms
 }
 
 // getCharmScore calculates a score for a charm based on its stats
@@ -395,37 +486,6 @@ func isProtectedCharm(charm data.Item) bool {
 	}
 
 	return false
-}
-
-// dropCharm drops a charm from the inventory
-func dropCharm(charm data.Item) error {
-	ctx := context.Get()
-
-	if !ctx.Data.OpenMenus.Inventory {
-		ctx.HID.PressKeyBinding(ctx.Data.KeyBindings.Inventory)
-		utils.Sleep(300)
-		*ctx.Data = ctx.GameReader.GetData()
-	}
-
-	screenPos := ui.GetScreenCoordsForItem(charm)
-	ctx.HID.Click(game.LeftButton, screenPos.X, screenPos.Y)
-	utils.Sleep(200)
-
-	*ctx.Data = ctx.GameReader.GetData()
-
-	if len(ctx.Data.Inventory.ByLocation(item.LocationCursor)) == 0 {
-		return fmt.Errorf("failed to pick up charm %s", getCharmName(charm))
-	}
-
-	DropMouseItem()
-
-	*ctx.Data = ctx.GameReader.GetData()
-
-	if len(ctx.Data.Inventory.ByLocation(item.LocationCursor)) > 0 {
-		return fmt.Errorf("charm still on cursor after drop attempt")
-	}
-
-	return nil
 }
 
 // getCharmName returns a display name for the charm
