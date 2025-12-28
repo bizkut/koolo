@@ -30,7 +30,7 @@ func (pf *PathFinder) RandomMovement() {
 	if pf.data.PlayerUnit.Area.IsTown() {
 		pf.hid.Click(game.LeftButton, x, y)
 	} else {
-		pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
+		pf.pressForceMove(x, y)
 	}
 	utils.Sleep(100)
 }
@@ -77,7 +77,7 @@ func (pf *PathFinder) DirectionalMovement() bool {
 		if pf.data.PlayerUnit.Area.IsTown() {
 			pf.hid.Click(game.LeftButton, screenX, screenY)
 		} else {
-			pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
+			pf.pressForceMove(screenX, screenY)
 		}
 		utils.Sleep(150)
 		return true
@@ -338,9 +338,27 @@ func (pf *PathFinder) MoveCharacter(x, y int, gamePos ...data.Position) {
 		if pf.data.PlayerUnit.Area.IsTown() {
 			pf.hid.Click(game.LeftButton, x, y)
 		} else {
-			pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
+			pf.pressForceMove(x, y)
 		}
 		utils.Sleep(50)
+	}
+}
+
+// pressForceMove handles ForceMove input, detecting if it's bound to a mouse button
+// and using Click instead of PressKeyBinding if so (since PressKeyBinding can't send
+// mouse messages properly without coordinates)
+func (pf *PathFinder) pressForceMove(x, y int) {
+	forceMoveKey := pf.data.KeyBindings.ForceMove.Key1[0]
+	if forceMoveKey == 0 || forceMoveKey == 255 {
+		forceMoveKey = pf.data.KeyBindings.ForceMove.Key2[0]
+	}
+	// VK_LBUTTON(1), VK_RBUTTON(2), VK_MBUTTON(4), VK_XBUTTON1(5), VK_XBUTTON2(6) - note: 3 is VK_CANCEL
+	if forceMoveKey >= 1 && forceMoveKey <= 6 && forceMoveKey != 3 {
+		// ForceMove is bound to a mouse button - use left click at the cursor position
+		pf.hid.Click(game.LeftButton, x, y)
+	} else {
+		// ForceMove is bound to a keyboard key - use PressKeyBinding
+		pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
 	}
 }
 
