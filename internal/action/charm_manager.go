@@ -30,12 +30,7 @@ const (
 	CharmTypeGrand = "grandcharm" // Grand Charm
 )
 
-// Unique charm names that should always be kept
-var uniqueCharms = []item.Name{
-	"Annihilus",
-	"Hellfire Torch",
-	"Gheed's Fortune",
-}
+// Note: Unique charms (Annihilus, Torch, Gheed's) are detected by item.QualityUnique
 
 // ManageCharms optimizes charms between inventory and stash
 // This should be called periodically, ideally during town visits
@@ -514,19 +509,18 @@ func getCharmScore(charm data.Item) float64 {
 func isProtectedCharm(charm data.Item) bool {
 	ctx := context.Get()
 
+	// Check if unique charms should be protected
 	if ctx.CharacterCfg.CharmManager.KeepUniques {
+		// Unique quality covers Annihilus, Hellfire Torch, Gheed's Fortune
 		if charm.Quality == item.QualityUnique {
 			return true
 		}
-		for _, uniqueName := range uniqueCharms {
-			if charm.Name == uniqueName {
-				return true
-			}
-		}
 	}
 
+	// Check if skillers should be protected
 	if ctx.CharacterCfg.CharmManager.KeepSkillers {
-		if charm.Desc().Type == CharmTypeGrand {
+		// Skillers are Grand Charms with +skill tab stats
+		if string(charm.Name) == CharmTypeGrand {
 			for statID := stat.ID(188); statID <= stat.ID(250); statID++ {
 				if skillStat, found := charm.FindStat(statID, 0); found && skillStat.Value > 0 {
 					return true
