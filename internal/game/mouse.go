@@ -23,6 +23,10 @@ const pointerReleaseDelay = 150 * time.Millisecond
 // MovePointer moves the mouse to the requested position, x and y should be the final position based on
 // pixels shown in the screen. Top-left corner is 0,0
 func (hid *HID) MovePointer(x, y int) {
+	// Skip mouse operations when paused (cursor override disabled)
+	if !hid.gi.CursorOverrideActive() {
+		return
+	}
 	hid.gr.updateWindowPositionData()
 	x = hid.gr.WindowLeftX + x
 	y = hid.gr.WindowTopY + y
@@ -36,6 +40,10 @@ func (hid *HID) MovePointer(x, y int) {
 
 // Click just does a single mouse click at current pointer position
 func (hid *HID) Click(btn MouseButton, x, y int) {
+	// Skip clicks when paused (cursor override disabled)
+	if !hid.gi.CursorOverrideActive() {
+		return
+	}
 	hid.MovePointer(x, y)
 	x = hid.gr.WindowLeftX + x
 	y = hid.gr.WindowTopY + y
@@ -55,6 +63,10 @@ func (hid *HID) Click(btn MouseButton, x, y int) {
 }
 
 func (hid *HID) ClickWithModifier(btn MouseButton, x, y int, modifier ModifierKey) {
+	// Skip clicks when paused (cursor override disabled)
+	if !hid.gi.CursorOverrideActive() {
+		return
+	}
 	hid.gi.OverrideGetKeyState(byte(modifier))
 	hid.Click(btn, x, y)
 	hid.gi.RestoreGetKeyState()

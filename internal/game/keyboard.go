@@ -17,6 +17,10 @@ const (
 
 // PressKey receives an ASCII code and sends a key press event to the game window
 func (hid *HID) PressKey(key byte) {
+	// Skip key presses when paused (cursor override disabled)
+	if !hid.gi.CursorOverrideActive() {
+		return
+	}
 	win.PostMessage(hid.gr.HWND, win.WM_KEYDOWN, uintptr(key), hid.calculatelParam(key, true))
 	sleepTime := rand.Intn(keyPressMaxTime-keyPressMinTime) + keyPressMinTime
 	time.Sleep(time.Duration(sleepTime) * time.Millisecond)
@@ -49,12 +53,20 @@ func (hid *HID) PressKeyBinding(kb data.KeyBinding) {
 
 // KeyDown sends a key down event to the game window
 func (hid *HID) KeyDown(kb data.KeyBinding) {
+	// Skip key events when paused (cursor override disabled)
+	if !hid.gi.CursorOverrideActive() {
+		return
+	}
 	keys := getKeysForKB(kb)
 	win.PostMessage(hid.gr.HWND, win.WM_KEYDOWN, uintptr(keys[0]), hid.calculatelParam(keys[0], true))
 }
 
 // KeyUp sends a key up event to the game window
 func (hid *HID) KeyUp(kb data.KeyBinding) {
+	// Skip key events when paused (cursor override disabled)
+	if !hid.gi.CursorOverrideActive() {
+		return
+	}
 	keys := getKeysForKB(kb)
 	win.PostMessage(hid.gr.HWND, win.WM_KEYUP, uintptr(keys[0]), hid.calculatelParam(keys[0], false))
 }
