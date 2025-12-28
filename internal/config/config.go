@@ -443,8 +443,15 @@ type CharacterCfg struct {
 		MercDied        bool `yaml:"mercDied"`
 		EquipmentBroken bool `yaml:"equipmentBroken"`
 	} `yaml:"backtotown"`
-	Shopping ShoppingConfig `yaml:"shopping"`
-	Runtime  struct {
+	Shopping     ShoppingConfig `yaml:"shopping"`
+	CharmManager struct {
+		Enabled           bool    `yaml:"enabled"`
+		MinScore          float64 `yaml:"minScore"`          // Minimum score a charm must have to be kept (default: 10)
+		KeepSkillers      bool    `yaml:"keepSkillers"`      // Always keep Grand Charms with +skills (default: true)
+		KeepUniques       bool    `yaml:"keepUniques"`       // Always keep Unique charms like Gheed's, Annihilus, Torch (default: true)
+		OptimizeFromStash bool    `yaml:"optimizeFromStash"` // Pull better charms from stash to inventory
+	} `yaml:"charmManager"`
+	Runtime struct {
 		Rules     nip.Rules   `yaml:"-"`
 		TierRules []int       `yaml:"-"`
 		Drops     []data.Item `yaml:"-"`

@@ -111,6 +111,9 @@ func PreRun(firstRun bool) error {
 		AutoEquip()
 	}
 
+	// Manage charms in inventory - drop low-value ones
+	ManageCharms()
+
 	// Stash before vendor
 	Stash(false)
 
@@ -198,6 +201,10 @@ func InRunReturnTownRoutine() error {
 		AutoEquip()
 		ctx.PauseIfNotPriority() // Check after AutoEquip
 	}
+
+	// Manage charms in inventory - drop low-value ones
+	ManageCharms()
+	ctx.PauseIfNotPriority() // Check after ManageCharms
 
 	VendorRefill(false, true)
 	ctx.PauseIfNotPriority() // Check after VendorRefill
