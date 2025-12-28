@@ -282,8 +282,9 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 		ctx.Logger.Debug(fmt.Sprintf("CharmManager: Stash check for %s, sameTypeCount=%d, isBest=%v",
 			i.Name, sameTypeCount, i.UnitID == bestCharm.UnitID))
 
-		// If this is the only charm of its type, OR if this IS the best one, don't stash
-		if sameTypeCount == 1 || i.UnitID == bestCharm.UnitID {
+		// If this is the only charm of its type (or fewer, edge case), OR if this IS the best one, don't stash
+		// Using <= 1 defensively in case of race condition where item isn't found
+		if sameTypeCount <= 1 || i.UnitID == bestCharm.UnitID {
 			ctx.Logger.Debug(fmt.Sprintf("CharmManager: Keeping charm %s in inventory (count=%d, isBest=%v)",
 				i.Name, sameTypeCount, i.UnitID == bestCharm.UnitID))
 			return false, false, "", ""
@@ -297,14 +298,11 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 	}
 
 	// These items should NEVER be stashed, regardless of quest status, pickit rules, or first run.
-	fmt.Printf("DEBUG: Evaluating item '%s' for *absolute* exclusion from stash.\n", i.Name)
-	if i.Name == "horadricstaff" { // This is the simplest way given your logs
-		fmt.Printf("DEBUG: ABSOLUTELY PREVENTING stash for '%s' (Horadric Staff exclusion).\n", i.Name)
-		return false, false, "", "" // Explicitly do NOT stash the Horadric Staff
+	if i.Name == "horadricstaff" {
+		return false, false, "", ""
 	}
 
 	if i.Name == "TomeOfTownPortal" || i.Name == "TomeOfIdentify" || i.Name == "Key" || i.Name == "WirtsLeg" {
-		fmt.Printf("DEBUG: ABSOLUTELY PREVENTING stash for '%s' (Quest/Special item exclusion).\n", i.Name)
 		return false, false, "", ""
 	}
 
@@ -313,7 +311,6 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 	}
 
 	if firstRun {
-		fmt.Printf("DEBUG: Allowing stash for '%s' (first run).\n", i.Name)
 		return true, false, "FirstRun", ""
 	}
 
@@ -347,11 +344,9 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 	if res == nip.RuleResultFullMatch {
 		if doesExceedQuantity(rule) {
 			// If it matches a rule but exceeds quantity, we want to drop it, not stash.
-			fmt.Printf("DEBUG: Dropping '%s' because MaxQuantity is exceeded.\n", i.Name)
 			return false, true, rule.RawLine, rule.Filename + ":" + strconv.Itoa(rule.LineNumber)
 		} else {
 			// If it matches a rule and quantity is fine, stash it.
-			fmt.Printf("DEBUG: Allowing stash for '%s' (pickit rule match: %s).\n", i.Name, rule.RawLine)
 			return true, false, rule.RawLine, rule.Filename + ":" + strconv.Itoa(rule.LineNumber)
 		}
 	}
@@ -360,7 +355,6 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 		return true, false, "Runeword", ""
 	}
 
-	fmt.Printf("DEBUG: Disallowing stash for '%s' (no rule match and not explicitly kept, and not exceeding quantity).\n", i.Name)
 	return false, false, "", "" // Default if no other rule matches
 }
 

@@ -120,7 +120,7 @@ func findCharmSwaps(inventoryCharms, stashCharms []CharmScore) []CharmSwap {
 
 	// For each stash charm, see if it's better than any inventory charm of same size
 	for _, stashCharm := range stashCharms {
-		stashType := stashCharm.Item.Desc().Type
+		stashCharmName := string(stashCharm.Item.Name)
 
 		// Find the worst inventory charm of the same type
 		worstIdx := -1
@@ -139,8 +139,8 @@ func findCharmSwaps(inventoryCharms, stashCharms []CharmScore) []CharmSwap {
 			if isProtectedCharm(invCharm.Item) {
 				continue
 			}
-			// Must be same charm type (size)
-			if invCharm.Item.Desc().Type != stashType {
+			// Must be same charm type (by name: smallcharm, largecharm, grandcharm)
+			if string(invCharm.Item.Name) != stashCharmName {
 				continue
 			}
 			// Must be worse than the stash charm
