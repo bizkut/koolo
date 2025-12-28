@@ -1020,6 +1020,10 @@ func equip(itm data.Item, bodyloc item.LocationType, target item.LocationType) e
 	ctx.SetLastAction("Equip")
 	defer step.CloseAllMenus()
 
+	// Store original item ID for dropped item recovery
+	originalItemID := itm.UnitID
+	originalItemName := itm.IdentifiedName
+
 	// Move item from stash to inventory if needed
 	if itm.Location.LocationType == item.LocationStash || itm.Location.LocationType == item.LocationSharedStash {
 		OpenStash()
@@ -1048,14 +1052,48 @@ func equip(itm data.Item, bodyloc item.LocationType, target item.LocationType) e
 
 	// Main retry loop
 	for attempt := 0; attempt < 3; attempt++ {
-		for !ctx.Data.OpenMenus.Inventory {
+		// Ensure inventory is open
+		*ctx.Data = ctx.GameReader.GetData()
+		for retries := 0; retries < 3 && !ctx.Data.OpenMenus.Inventory; retries++ {
 			ctx.HID.PressKeyBinding(ctx.Data.KeyBindings.Inventory)
 			utils.Sleep(EquipDelayMS)
+			*ctx.Data = ctx.GameReader.GetData()
 		}
 
 		if target == item.LocationMercenary {
-			ctx.HID.PressKeyBinding(ctx.Data.KeyBindings.MercenaryScreen)
-			utils.Sleep(EquipDelayMS)
+			// Open mercenary screen with verification
+			for retries := 0; retries < 3; retries++ {
+				ctx.HID.PressKeyBinding(ctx.Data.KeyBindings.MercenaryScreen)
+				utils.Sleep(EquipDelayMS)
+				*ctx.Data = ctx.GameReader.GetData()
+				// Check if merc screen opened by verifying we can see merc items
+				mercItems := ctx.Data.Inventory.ByLocation(item.LocationMercenary)
+				if len(mercItems) > 0 || ctx.Data.MercHPPercent() > 0 {
+					break
+				}
+				ctx.Logger.Debug(fmt.Sprintf("Mercenary screen not open yet, retry %d/3", retries+1))
+			}
+
+			// Verify item is still in inventory before equipping
+			*ctx.Data = ctx.GameReader.GetData()
+			var itemStillInInventory bool
+			for _, invItem := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+				if invItem.UnitID == itm.UnitID {
+					itm = invItem // Update item reference
+					itemStillInInventory = true
+					break
+				}
+			}
+			if !itemStillInInventory {
+				ctx.Logger.Warn(fmt.Sprintf("Item %s disappeared from inventory before merc equip", originalItemName))
+				// Check if it dropped on ground
+				if droppedItem := recoverDroppedItem(originalItemID, originalItemName); droppedItem != nil {
+					ctx.Logger.Info(fmt.Sprintf("Recovered dropped item: %s", originalItemName))
+					return nil // Item was picked up, consider this a partial success
+				}
+				return fmt.Errorf("item %s not found in inventory", originalItemName)
+			}
+
 			ctx.HID.ClickWithModifier(game.LeftButton, ui.GetScreenCoordsForItem(itm).X, ui.GetScreenCoordsForItem(itm).Y, game.CtrlKey)
 		} else {
 			currentlyEquipped := GetEquippedItem(ctx.Data.Inventory, bodyloc)
@@ -1150,10 +1188,11 @@ func equip(itm data.Item, bodyloc item.LocationType, target item.LocationType) e
 		}
 
 		// Verification loop
+		utils.Sleep(800)
 		*ctx.Data = ctx.GameReader.GetData()
 		var itemEquipped bool
 		for i := 0; i < 3; i++ {
-			utils.Sleep(800)
+			utils.Sleep(500)
 			*ctx.Data = ctx.GameReader.GetData()
 			for _, inPlace := range ctx.Data.Inventory.ByLocation(target) {
 				if inPlace.UnitID == itm.UnitID && inPlace.Location.BodyLocation == bodyloc {
@@ -1168,10 +1207,58 @@ func equip(itm data.Item, bodyloc item.LocationType, target item.LocationType) e
 		if itemEquipped {
 			return nil
 		}
+
+		// Check if item dropped on ground during failed equip attempt
+		*ctx.Data = ctx.GameReader.GetData()
+		if droppedItem := recoverDroppedItem(originalItemID, originalItemName); droppedItem != nil {
+			ctx.Logger.Info(fmt.Sprintf("Recovered dropped item during equip attempt: %s", originalItemName))
+			// Item was picked up, retry equip with the recovered item
+			itm = *droppedItem
+			continue
+		}
+
 		ctx.Logger.Debug(fmt.Sprintf("Equip attempt %d failed, retrying...", attempt+1))
 		utils.Sleep(500)
 	}
 	return fmt.Errorf("verification failed after all attempts to equip %s", itm.IdentifiedName)
+}
+
+// recoverDroppedItem checks for an item on the ground and picks it up if found
+func recoverDroppedItem(itemID data.UnitID, itemName string) *data.Item {
+	ctx := context.Get()
+
+	// Refresh game data to see ground items
+	*ctx.Data = ctx.GameReader.GetData()
+
+	// Look for the item on the ground
+	for _, groundItem := range ctx.Data.Inventory.ByLocation(item.LocationGround) {
+		if groundItem.UnitID == itemID {
+			ctx.Logger.Warn(fmt.Sprintf("Found item %s on ground! Attempting to pick it up...", itemName))
+
+			// Move to the item and pick it up
+			if err := MoveToCoords(groundItem.Position); err != nil {
+				ctx.Logger.Error(fmt.Sprintf("Failed to move to dropped item: %v", err))
+				return nil
+			}
+
+			// Try to pick up the item
+			screenX, screenY := ctx.PathFinder.GameCoordsToScreenCords(groundItem.Position.X, groundItem.Position.Y)
+			ctx.HID.Click(game.LeftButton, screenX, screenY)
+			utils.Sleep(500)
+
+			// Verify pickup
+			*ctx.Data = ctx.GameReader.GetData()
+			for _, invItem := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+				if invItem.UnitID == itemID {
+					ctx.Logger.Info(fmt.Sprintf("Successfully recovered dropped item: %s", itemName))
+					return &invItem
+				}
+			}
+			ctx.Logger.Error(fmt.Sprintf("Failed to pick up dropped item: %s", itemName))
+			return nil
+		}
+	}
+	return nil
 }
 
 // findInventorySpace finds the top-left grid coordinates for a free spot in the inventory.
