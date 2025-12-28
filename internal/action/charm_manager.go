@@ -182,10 +182,19 @@ func executeCharmSwaps(swaps []CharmSwap) error {
 			getCharmName(swap.FromStash.Item), swap.FromStash.Score))
 
 		// Safety: Clear cursor before starting swap
-		if !clearCursorSafely() {
+		if cleared, dropped := clearCursorSafely(); !cleared {
 			ctx.Logger.Error("CharmManager: Could not clear cursor, aborting swaps")
 			step.CloseAllMenus()
 			return fmt.Errorf("cursor not empty")
+		} else if dropped {
+			// If we dropped something, try to recover it once
+			if recoverDroppedCharm() {
+				// If we recovered it, we are holding it again. Try to stash it one last time?
+				// Or just return error to stop swapping and let standard cleanup handle it?
+				// Safest is to error out so we don't loop.
+				ctx.Logger.Warn("CharmManager: Recovered dropped charm, aborting swap to prevent loops")
+				return fmt.Errorf("recovered dropped item")
+			}
 		}
 
 		// Step 1: Open stash if not open
@@ -289,7 +298,11 @@ func executeCharmSwaps(swaps []CharmSwap) error {
 	}
 
 	// Final safety: Ensure cursor is clear before closing
-	clearCursorSafely()
+	if cleared, dropped := clearCursorSafely(); !cleared {
+		ctx.Logger.Warn("CharmManager: Cursor not clear after swaps")
+	} else if dropped {
+		recoverDroppedCharm()
+	}
 
 	// Close stash when done
 	step.CloseAllMenus()
@@ -298,26 +311,64 @@ func executeCharmSwaps(swaps []CharmSwap) error {
 }
 
 // clearCursorSafely ensures no item is on the cursor, with retry limit to prevent loops
-func clearCursorSafely() bool {
+// Returns (cleared status, whether item was dropped)
+func clearCursorSafely() (bool, bool) {
 	ctx := context.Get()
 	const maxRetries = 3
+	dropped := false
 
 	for i := 0; i < maxRetries; i++ {
 		ctx.RefreshGameData()
 		cursorItems := ctx.Data.Inventory.ByLocation(item.LocationCursor)
 		if len(cursorItems) == 0 {
-			return true // Cursor is clear
+			return true, dropped // Cursor is clear
 		}
 
 		ctx.Logger.Warn(fmt.Sprintf("CharmManager: Item on cursor, attempting to clear (attempt %d/%d)", i+1, maxRetries))
 
 		// Try to drop the item safely
 		DropMouseItem()
+		dropped = true
 		utils.Sleep(500)
 	}
 
 	ctx.RefreshGameData()
-	return len(ctx.Data.Inventory.ByLocation(item.LocationCursor)) == 0
+	return len(ctx.Data.Inventory.ByLocation(item.LocationCursor)) == 0, dropped
+}
+
+// recoverDroppedCharm attempts to pick up a charm that was accidentally dropped
+func recoverDroppedCharm() bool {
+	ctx := context.Get()
+	ctx.RefreshGameData()
+
+	// Find the closest charm on ground
+	var closestCharm data.Item
+	minDist := 999
+	found := false
+
+	for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationGround) {
+		if isCharmItem(itm) {
+			dist := ctx.PathFinder.DistanceFromMe(itm.Position)
+			if dist < 5 && dist < minDist {
+				minDist = dist
+				closestCharm = itm
+				found = true
+			}
+		}
+	}
+
+	if found {
+		ctx.Logger.Warn(fmt.Sprintf("CharmManager: Attempting to recover dropped charm: %s", getCharmName(closestCharm)))
+		// Attempt pickup (max 3 tries)
+		if err := step.PickupItem(closestCharm, 3); err == nil {
+			ctx.Logger.Info("CharmManager: Successfully recovered dropped charm")
+			return true
+		} else {
+			ctx.Logger.Error(fmt.Sprintf("CharmManager: Failed to recover dropped charm: %v", err))
+		}
+	}
+
+	return false
 }
 
 // getAllCharms returns all charms from inventory and stash with scores
