@@ -2390,16 +2390,8 @@ func (s *HttpServer) characterSettings(w http.ResponseWriter, r *http.Request) {
 
 		// Charm Manager config
 		cfg.CharmManager.Enabled = r.Form.Has("charmManagerEnabled")
-		if v := r.Form.Get("charmManagerMinScore"); v != "" {
-			if score, err := strconv.ParseFloat(v, 64); err == nil && score >= 0 {
-				cfg.CharmManager.MinScore = score
-			} else {
-				cfg.CharmManager.MinScore = 10.0 // default
-			}
-		}
 		cfg.CharmManager.KeepSkillers = r.Form.Has("charmManagerKeepSkillers")
 		cfg.CharmManager.KeepUniques = r.Form.Has("charmManagerKeepUniques")
-		cfg.CharmManager.OptimizeFromStash = r.Form.Has("charmManagerOptimizeFromStash")
 
 		// Companion config
 		cfg.Companion.Enabled = r.Form.Has("companionEnabled")

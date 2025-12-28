@@ -1094,7 +1094,7 @@
             </label>
             <h3>Charm Manager</h3>
             <p style="font-size: 0.9em; color: #aaa; margin-bottom: 10px;">
-                Automatically evaluates charms in your inventory and drops low-value ones to optimize character power.
+                Automatically optimizes charms by comparing inventory and stash, keeping the best ones equipped.
             </p>
             <fieldset class="grid">
                 <label>
@@ -1105,25 +1105,12 @@
             <div id="charm-manager-settings" {{ if not .Config.CharmManager.Enabled }}style="display: none;"{{ end }}>
                 <fieldset class="grid">
                     <label>
-                        Minimum Charm Score (drop below this)
-                        <input type="number" name="charmManagerMinScore" min="0" max="200" step="1" value="{{ if .Config.CharmManager.MinScore }}{{ .Config.CharmManager.MinScore }}{{ else }}10{{ end }}"/>
-                        <small>Charms with scores below this value will be dropped. Higher = stricter filtering.</small>
-                    </label>
-                </fieldset>
-                <fieldset class="grid">
-                    <label>
                         <input type="checkbox" name="charmManagerKeepSkillers" {{ if .Config.CharmManager.KeepSkillers }}checked{{ end }}/>
                         Always keep Skillers (Grand Charms with +skills)
                     </label>
                     <label>
                         <input type="checkbox" name="charmManagerKeepUniques" {{ if .Config.CharmManager.KeepUniques }}checked{{ end }}/>
                         Always keep Unique charms (Annihilus, Torch, Gheed's)
-                    </label>
-                </fieldset>
-                <fieldset class="grid">
-                    <label>
-                        <input type="checkbox" name="charmManagerOptimizeFromStash" {{ if .Config.CharmManager.OptimizeFromStash }}checked{{ end }}/>
-                        Optimize from stash (swap better charms from stash into inventory)
                     </label>
                 </fieldset>
             </div>

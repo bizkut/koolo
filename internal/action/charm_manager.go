@@ -37,7 +37,7 @@ var uniqueCharms = []item.Name{
 	"Gheed's Fortune",
 }
 
-// ManageCharms evaluates all charms in the inventory and drops low-value ones
+// ManageCharms optimizes charms between inventory and stash
 // This should be called periodically, ideally during town visits
 func ManageCharms() error {
 	ctx := context.Get()
@@ -52,56 +52,7 @@ func ManageCharms() error {
 		return nil
 	}
 
-	// If OptimizeFromStash is enabled, use full optimization
-	if ctx.CharacterCfg.CharmManager.OptimizeFromStash {
-		return OptimizeCharms()
-	}
-
-	// Otherwise, just drop low-value charms (original V1 behavior)
-	ctx.Logger.Debug("CharmManager: Evaluating inventory charms...")
-
-	charms := getCharmsInInventory()
-	if len(charms) == 0 {
-		ctx.Logger.Debug("CharmManager: No charms found in inventory")
-		return nil
-	}
-
-	ctx.Logger.Debug(fmt.Sprintf("CharmManager: Found %d charms in inventory", len(charms)))
-
-	scoredCharms := make([]CharmScore, 0, len(charms))
-	for _, charm := range charms {
-		score := getCharmScore(charm)
-		scoredCharms = append(scoredCharms, CharmScore{Item: charm, Score: score, InStash: false})
-		ctx.Logger.Debug(fmt.Sprintf("CharmManager: %s scored %.1f", getCharmName(charm), score))
-	}
-
-	minScore := ctx.CharacterCfg.CharmManager.MinScore
-	if minScore <= 0 {
-		minScore = 10.0
-	}
-
-	for _, sc := range scoredCharms {
-		if isProtectedCharm(sc.Item) {
-			ctx.Logger.Debug(fmt.Sprintf("CharmManager: Protecting %s (unique/skiller)", getCharmName(sc.Item)))
-			continue
-		}
-
-		if IsInLockedInventorySlot(sc.Item) {
-			ctx.Logger.Debug(fmt.Sprintf("CharmManager: Skipping %s (in locked slot)", getCharmName(sc.Item)))
-			continue
-		}
-
-		if sc.Score < minScore {
-			ctx.Logger.Info(fmt.Sprintf("CharmManager: Dropping low-value charm %s (score: %.1f < %.1f)",
-				getCharmName(sc.Item), sc.Score, minScore))
-			if err := dropCharm(sc.Item); err != nil {
-				ctx.Logger.Error(fmt.Sprintf("CharmManager: Failed to drop charm: %v", err))
-				continue
-			}
-		}
-	}
-
-	return nil
+	return OptimizeCharms()
 }
 
 // OptimizeCharms compares inventory and stash charms, swapping to maximize equipped charm power
@@ -180,11 +131,6 @@ type CharmSwap struct {
 func findCharmSwaps(inventoryCharms, stashCharms []CharmScore) []CharmSwap {
 	ctx := context.Get()
 	swaps := make([]CharmSwap, 0)
-
-	minScore := ctx.CharacterCfg.CharmManager.MinScore
-	if minScore <= 0 {
-		minScore = 10.0
-	}
 
 	// For each stash charm, see if it's better than any inventory charm of same size
 	for _, stashCharm := range stashCharms {

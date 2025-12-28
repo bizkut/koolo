@@ -17,6 +17,7 @@ import (
 	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 	"github.com/hectorgimenez/koolo/internal/utils"
+	"github.com/lxn/win"
 )
 
 var baalThronePosition = data.Position{
@@ -215,7 +216,15 @@ func (s *Baal) Run(parameters *RunParameters) error {
 			}
 		}
 
-		return s.ctx.Char.KillBaal()
+		err = s.ctx.Char.KillBaal()
+		if err != nil {
+			return err
+		}
+
+		// Skip Act 5 cinematic after killing Baal (quest completion)
+		s.trySkipCinematic()
+
+		return nil
 	}
 
 	return nil
@@ -345,5 +354,16 @@ func (s *Baal) preAttackBaalWaves() {
 		step.CastAtPosition(skill.ShockWeb, true, throneCenter)
 		s.preAtkLast = time.Now()
 		return
+	}
+}
+
+func (s Baal) trySkipCinematic() {
+	if !s.ctx.Manager.InGame() {
+		// Skip Cinematics
+		utils.Sleep(2000)
+		action.HoldKey(win.VK_SPACE, 2000)
+		utils.Sleep(2000)
+		action.HoldKey(win.VK_SPACE, 2000)
+		utils.Sleep(2000)
 	}
 }
