@@ -208,7 +208,7 @@ func stashItemAcrossTabs(i data.Item, matchedRule string, ruleFile string, first
 	}
 
 	targetStartTab := startTab
-	if (i.Name == "grandcharm" || i.Name == "smallcharm" || i.Name == "largecharm") && i.Quality == item.QualityUnique {
+	if (strings.EqualFold(string(i.Name), "grandcharm") || strings.EqualFold(string(i.Name), "smallcharm") || strings.EqualFold(string(i.Name), "largecharm")) && i.Quality == item.QualityUnique {
 		targetStartTab = 2
 	}
 
@@ -269,7 +269,7 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 		sameTypeCount := 0
 
 		for _, invItem := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
-			if isCharmItem(invItem) && string(invItem.Name) == itemName {
+			if isCharmItem(invItem) && strings.EqualFold(string(invItem.Name), itemName) {
 				sameTypeCount++
 				score := getCharmScore(invItem)
 				if score > bestScore {

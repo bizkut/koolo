@@ -3,6 +3,7 @@ package action
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/item"
@@ -23,11 +24,11 @@ type CharmScore struct {
 	StashTab int  // which stash tab (0-indexed) if in stash
 }
 
-// Charm type constants - these match item.Name values
+// Charm type constants - these match item.Name values (PascalCase seems standard in D2Go)
 const (
-	CharmTypeSmall = "smallcharm" // Small Charm
-	CharmTypeLarge = "largecharm" // Large Charm
-	CharmTypeGrand = "grandcharm" // Grand Charm
+	CharmTypeSmall = "SmallCharm" // Small Charm
+	CharmTypeLarge = "LargeCharm" // Large Charm
+	CharmTypeGrand = "GrandCharm" // Grand Charm
 )
 
 // Note: Unique charms (Annihilus, Torch, Gheed's) are detected by item.QualityUnique
@@ -139,8 +140,8 @@ func findCharmSwaps(inventoryCharms, stashCharms []CharmScore) []CharmSwap {
 			if isProtectedCharm(invCharm.Item) {
 				continue
 			}
-			// Must be same charm type (by name: smallcharm, largecharm, grandcharm)
-			if string(invCharm.Item.Name) != stashCharmName {
+			// Must be same charm type (by name: smallcharm, largecharm, grandcharm) - Case Insensitive
+			if !strings.EqualFold(string(invCharm.Item.Name), stashCharmName) {
 				continue
 			}
 			// Must be worse than the stash charm
@@ -410,10 +411,12 @@ func getAllCharms() []CharmScore {
 	return allCharms
 }
 
-// isCharmItem checks if an item is a charm
+// isCharmItem checks if an item is a charm (case-insensitive)
 func isCharmItem(itm data.Item) bool {
 	itemName := string(itm.Name)
-	return itemName == CharmTypeSmall || itemName == CharmTypeLarge || itemName == CharmTypeGrand
+	return strings.EqualFold(itemName, CharmTypeSmall) ||
+		strings.EqualFold(itemName, CharmTypeLarge) ||
+		strings.EqualFold(itemName, CharmTypeGrand)
 }
 
 // getCharmScore calculates a score for a charm based on its stats
@@ -520,7 +523,8 @@ func isProtectedCharm(charm data.Item) bool {
 	// Check if skillers should be protected
 	if ctx.CharacterCfg.CharmManager.KeepSkillers {
 		// Skillers are Grand Charms with +skill tab stats
-		if string(charm.Name) == CharmTypeGrand {
+		// Use Case-Insensitive comparison
+		if strings.EqualFold(string(charm.Name), CharmTypeGrand) {
 			for statID := stat.ID(188); statID <= stat.ID(250); statID++ {
 				if skillStat, found := charm.FindStat(statID, 0); found && skillStat.Value > 0 {
 					return true
