@@ -8,6 +8,10 @@ function connectWebSocket() {
 
   socket.onopen = function () {
     console.log("WebSocket connected");
+    // Reload logs from server on reconnect to restore any logs that may have been lost
+    if (reconnectAttempts > 0 && typeof reloadLogsFromServer === 'function') {
+      reloadLogsFromServer();
+    }
     reconnectAttempts = 0;
   };
 

@@ -31,15 +31,29 @@
     }
 
     function loadInitialLogs() {
-        fetch(`/api/logs?source=${currentSource}&last=100`)
+        reloadLogsFromServer();
+    }
+
+    // Reload logs from the server - can be called on WebSocket reconnect
+    function reloadLogsFromServer() {
+        fetch(`/api/logs?source=${currentSource}&last=500`)
             .then(r => r.json())
             .then(logs => {
                 if (Array.isArray(logs)) {
-                    logs.forEach(log => addLogEntry(log, false));
+                    // Merge with existing logs to avoid duplicates
+                    const existingLogs = getSourceLogs(currentSource);
+                    const existingTimestamps = new Set(existingLogs.map(e => e.timestamp + e.message));
+                    
+                    logs.forEach(log => {
+                        const key = log.timestamp + log.message;
+                        if (!existingTimestamps.has(key)) {
+                            addLogEntry(log, false);
+                        }
+                    });
                     renderLogs();
                 }
             })
-            .catch(err => console.error('Failed to load initial logs:', err));
+            .catch(err => console.error('Failed to load logs:', err));
 
         // Load available sources
         fetch('/api/logs/sources')
@@ -51,6 +65,9 @@
             })
             .catch(err => console.error('Failed to load log sources:', err));
     }
+
+    // Export for use in dashboard.js on WebSocket reconnect
+    window.reloadLogsFromServer = reloadLogsFromServer;
 
     // Called from WebSocket message handler
     window.handleLogMessage = function (data) {

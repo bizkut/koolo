@@ -660,14 +660,21 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 				continue
 			} else if errors.Is(moveErr, step.ErrPlayerStuck) || errors.Is(moveErr, step.ErrPlayerRoundTrip) {
 				stuckRetries++
-				if stuckRetries > 5 {
+				if stuckRetries > 8 {
 					ctx.Logger.Warn("Too many stuck/round-trip errors, aborting movement",
 						slog.Int("retries", stuckRetries),
 						slog.String("area", ctx.Data.PlayerUnit.Area.Area().Name))
 					return moveErr
 				}
+
+				// Progressively more aggressive stuck recovery
 				if (!ctx.Data.CanTeleport() || stuck) || ctx.Data.PlayerUnit.Area.IsTown() {
-					ctx.PathFinder.RandomMovement()
+					// More random movements on higher retry counts
+					movementAttempts := min(stuckRetries, 3)
+					for i := 0; i < movementAttempts; i++ {
+						ctx.PathFinder.RandomMovement()
+						time.Sleep(time.Millisecond * 150)
+					}
 					time.Sleep(time.Millisecond * 200)
 				}
 				stuck = true

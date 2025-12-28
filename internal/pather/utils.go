@@ -15,13 +15,108 @@ import (
 )
 
 func (pf *PathFinder) RandomMovement() {
+	// First try directional movement to find a walkable position
+	if pf.DirectionalMovement() {
+		return
+	}
+
+	// Fallback to pure random if directional failed
 	midGameX := pf.gr.GameAreaSizeX / 2
 	midGameY := pf.gr.GameAreaSizeY / 2
 	x := midGameX + rand.Intn(midGameX) - (midGameX / 2)
 	y := midGameY + rand.Intn(midGameY) - (midGameY / 2)
 	pf.hid.MovePointer(x, y)
-	pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
-	utils.Sleep(50)
+	// Use appropriate movement method for town vs field
+	if pf.data.PlayerUnit.Area.IsTown() {
+		pf.hid.Click(game.LeftButton, x, y)
+	} else {
+		pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
+	}
+	utils.Sleep(100)
+}
+
+// DirectionalMovement tries to move in 8 cardinal directions, preferring walkable positions
+// Returns true if a movement was attempted
+func (pf *PathFinder) DirectionalMovement() bool {
+	// Safety check for nil AreaData or Grid
+	if pf.data.AreaData.Grid == nil || pf.data.AreaData.Grid.CollisionGrid == nil {
+		return false
+	}
+
+	currentPos := pf.data.PlayerUnit.Position
+
+	// 8 directions: N, NE, E, SE, S, SW, W, NW (distance of 5 units)
+	directions := []struct{ dx, dy int }{
+		{0, -5}, {5, -5}, {5, 0}, {5, 5},
+		{0, 5}, {-5, 5}, {-5, 0}, {-5, -5},
+	}
+
+	// Shuffle directions to avoid always trying the same order
+	rand.Shuffle(len(directions), func(i, j int) {
+		directions[i], directions[j] = directions[j], directions[i]
+	})
+
+	// Helper function to attempt movement to a position
+	attemptMove := func(targetPos data.Position, checkWalkable bool) bool {
+		// Check walkability if required
+		if checkWalkable && !pf.data.AreaData.IsWalkable(targetPos) {
+			return false
+		}
+
+		// Convert to screen coordinates
+		screenX, screenY := pf.GameCoordsToScreenCords(targetPos.X, targetPos.Y)
+
+		// Bounds check for screen coordinates
+		if screenX <= 50 || screenX >= pf.gr.GameAreaSizeX-50 ||
+			screenY <= 50 || screenY >= int(float32(pf.gr.GameAreaSizeY)/1.19) {
+			return false
+		}
+
+		// Perform the movement
+		pf.hid.MovePointer(screenX, screenY)
+		if pf.data.PlayerUnit.Area.IsTown() {
+			pf.hid.Click(game.LeftButton, screenX, screenY)
+		} else {
+			pf.hid.PressKeyBinding(pf.data.KeyBindings.ForceMove)
+		}
+		utils.Sleep(150)
+		return true
+	}
+
+	// First pass: try each direction with walkability check
+	for _, dir := range directions {
+		targetPos := data.Position{
+			X: currentPos.X + dir.dx,
+			Y: currentPos.Y + dir.dy,
+		}
+		if attemptMove(targetPos, true) {
+			return true
+		}
+	}
+
+	// Second pass: try larger radius (10 units) with walkability check
+	for _, dir := range directions {
+		targetPos := data.Position{
+			X: currentPos.X + dir.dx*2,
+			Y: currentPos.Y + dir.dy*2,
+		}
+		if attemptMove(targetPos, true) {
+			return true
+		}
+	}
+
+	// Last resort: try any direction without walkability check (maybe we're on a bad tile)
+	for _, dir := range directions {
+		targetPos := data.Position{
+			X: currentPos.X + dir.dx,
+			Y: currentPos.Y + dir.dy,
+		}
+		if attemptMove(targetPos, false) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (pf *PathFinder) DistanceFromMe(p data.Position) int {
