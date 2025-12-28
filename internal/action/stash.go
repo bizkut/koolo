@@ -260,9 +260,30 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 		return false, false, "", ""
 	}
 
-	// Don't stash charms if Charm Manager is enabled - they are "equipped" in inventory
+	// Don't stash charms if Charm Manager is enabled - but only keep the BEST of each type
 	if ctx.CharacterCfg.CharmManager.Enabled && isCharmItem(i) {
-		return false, false, "", ""
+		// Count and score all charms of the same type in inventory
+		itemType := i.Desc().Type
+		var bestCharm data.Item
+		bestScore := -1.0
+		sameTypeCount := 0
+
+		for _, invItem := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+			if isCharmItem(invItem) && invItem.Desc().Type == itemType {
+				sameTypeCount++
+				score := getCharmScore(invItem)
+				if score > bestScore {
+					bestScore = score
+					bestCharm = invItem
+				}
+			}
+		}
+
+		// If this is the only charm of its type, OR if this IS the best one, don't stash
+		if sameTypeCount == 1 || i.UnitID == bestCharm.UnitID {
+			return false, false, "", ""
+		}
+		// Otherwise, this is an "extra" charm that isn't the best - let it be stashed
 	}
 
 	// These items should NEVER be stashed, regardless of quest status, pickit rules, or first run.
