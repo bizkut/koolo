@@ -386,14 +386,29 @@ func isValidLocation(i data.Item, bodyLoc item.LocationType, target item.Locatio
 
 	if target == item.LocationMercenary {
 		if slices.Contains(mercBodyLocs, bodyLoc) {
-			if bodyLoc == item.LocLeftArm {
+			switch bodyLoc {
+			case item.LocHead:
+				// Valid helmet types for mercenary
+				validHelmetTypes := []string{"helm", "phlm", "pelt", "circ"}
+				return slices.Contains(validHelmetTypes, itemType)
+
+			case item.LocTorso:
+				// Valid armor types for mercenary
+				validArmorTypes := []string{"tors", "cloa"}
+				return slices.Contains(validArmorTypes, itemType)
+
+			case item.LocLeftArm:
+				// Weapon validation depends on merc type
 				if isAct2MercenaryPresent(npc.Guard) {
-					return itemType == "spea" || itemType == "pole" || itemType == "jave"
+					// Act 2 merc uses polearms, spears, javelins
+					validAct2Weapons := []string{"spea", "pole", "jave"}
+					return slices.Contains(validAct2Weapons, itemType)
 				} else {
-					return itemType == "bow"
+					// Act 1 Rogue uses bows and crossbows
+					validAct1Weapons := []string{"bow", "xbow"}
+					return slices.Contains(validAct1Weapons, itemType)
 				}
 			}
-			return true
 		}
 		return false
 	}
