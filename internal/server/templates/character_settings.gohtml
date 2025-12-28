@@ -1042,6 +1042,52 @@
                     value="{{ .Config.CubeRecipes.JewelsToKeep }}" />
                 <small>Number of magic jewels to stash for crafting</small>
             </label>
+            <h3>Charm Manager</h3>
+            <p style="font-size: 0.9em; color: #aaa; margin-bottom: 10px;">
+                Automatically evaluates charms in your inventory and drops low-value ones to optimize character power.
+            </p>
+            <fieldset class="grid">
+                <label>
+                    <input type="checkbox" name="charmManagerEnabled" id="charmManagerEnabled" {{ if .Config.CharmManager.Enabled }}checked{{ end }}/>
+                    Enable Charm Manager
+                </label>
+            </fieldset>
+            <div id="charm-manager-settings" {{ if not .Config.CharmManager.Enabled }}style="display: none;"{{ end }}>
+                <fieldset class="grid">
+                    <label>
+                        Minimum Charm Score (drop below this)
+                        <input type="number" name="charmManagerMinScore" min="0" max="200" step="1" value="{{ if .Config.CharmManager.MinScore }}{{ .Config.CharmManager.MinScore }}{{ else }}10{{ end }}"/>
+                        <small>Charms with scores below this value will be dropped. Higher = stricter filtering.</small>
+                    </label>
+                </fieldset>
+                <fieldset class="grid">
+                    <label>
+                        <input type="checkbox" name="charmManagerKeepSkillers" {{ if .Config.CharmManager.KeepSkillers }}checked{{ end }}/>
+                        Always keep Skillers (Grand Charms with +skills)
+                    </label>
+                    <label>
+                        <input type="checkbox" name="charmManagerKeepUniques" {{ if .Config.CharmManager.KeepUniques }}checked{{ end }}/>
+                        Always keep Unique charms (Annihilus, Torch, Gheed's)
+                    </label>
+                </fieldset>
+                <fieldset class="grid">
+                    <label>
+                        <input type="checkbox" name="charmManagerOptimizeFromStash" {{ if .Config.CharmManager.OptimizeFromStash }}checked{{ end }}/>
+                        Optimize from stash (swap better charms from stash into inventory)
+                    </label>
+                </fieldset>
+            </div>
+            <script>
+                (function() {
+                    const charmManagerEnabled = document.getElementById('charmManagerEnabled');
+                    const charmManagerSettings = document.getElementById('charm-manager-settings');
+                    if (charmManagerEnabled && charmManagerSettings) {
+                        charmManagerEnabled.addEventListener('change', function() {
+                            charmManagerSettings.style.display = this.checked ? 'block' : 'none';
+                        });
+                    }
+                })();
+            </script>
             <h3>Back to Town Settings:</h3>
             <fieldset class="grid">
                 <label>
