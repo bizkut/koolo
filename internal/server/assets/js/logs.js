@@ -31,22 +31,28 @@
     }
 
     function loadInitialLogs() {
-        fetch(`/api/logs?source=${currentSource}&last=100`)
-            .then(r => r.json())
-            .then(logs => {
-                if (Array.isArray(logs)) {
-                    logs.forEach(log => addLogEntry(log, false));
-                    renderLogs();
-                }
-            })
-            .catch(err => console.error('Failed to load initial logs:', err));
-
-        // Load available sources
+        // Load available sources first, then load logs for ALL sources
         fetch('/api/logs/sources')
             .then(r => r.json())
             .then(sources => {
                 if (Array.isArray(sources)) {
+                    // Add tabs for all sources
                     sources.forEach(s => addSourceTab(s));
+
+                    // Load logs for ALL sources to preserve them across page refresh
+                    const loadPromises = sources.map(source =>
+                        fetch(`/api/logs?source=${encodeURIComponent(source)}&last=100`)
+                            .then(r => r.json())
+                            .then(logs => {
+                                if (Array.isArray(logs)) {
+                                    logs.forEach(log => addLogEntry(log, false));
+                                }
+                            })
+                            .catch(err => console.error(`Failed to load logs for ${source}:`, err))
+                    );
+
+                    // After all sources are loaded, render the current source
+                    Promise.all(loadPromises).then(() => renderLogs());
                 }
             })
             .catch(err => console.error('Failed to load log sources:', err));
