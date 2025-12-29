@@ -1077,6 +1077,14 @@
                 <input type="checkbox" name="skipPerfectRubies" {{ if .Config.CubeRecipes.SkipPerfectRubies }}checked{{ end }}/>
                 Don't use Perfect Rubies when rolling charms
             </label><br>
+            <label>
+                <input type="checkbox" name="enableFullRejuvCrafting" {{ if .Config.CubeRecipes.EnableFullRejuvCrafting }}checked{{ end }}/>
+                Craft Full Rejuv Potions (uses normal gems)
+            </label><br>
+            <label>
+                <input type="checkbox" name="enableRejuvCrafting" {{ if .Config.CubeRecipes.EnableRejuvCrafting }}checked{{ end }}/>
+                Craft Rejuv Potions (uses chipped gems)
+            </label><br>
             <div class="recipe-grid">
                 {{ range $index, $recipe := .RecipeList }}
                 <label>

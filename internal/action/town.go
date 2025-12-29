@@ -132,8 +132,10 @@ func PreRun(firstRun bool) error {
 			RerollRunewords()
 		}
 		CubeRecipes()
+		CraftRejuvenationPotions()
 	} else {
 		CubeRecipes()
+		CraftRejuvenationPotions()
 		MakeRunewords()
 		if !isLevelingChar {
 			RerollRunewords()
@@ -233,9 +235,11 @@ func InRunReturnTownRoutine() error {
 			RerollRunewords()
 		}
 		CubeRecipes()
+		CraftRejuvenationPotions()
 		ctx.PauseIfNotPriority() // Check after CubeRecipes
 	} else {
 		CubeRecipes()
+		CraftRejuvenationPotions()
 		ctx.PauseIfNotPriority() // Check after CubeRecipes
 		MakeRunewords()
 

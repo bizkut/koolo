@@ -434,12 +434,14 @@ type CharacterCfg struct {
 		CurrentMuleIndex int `yaml:"currentMuleIndex"`
 	} `yaml:"mulingState"`
 	CubeRecipes struct {
-		Enabled              bool     `yaml:"enabled"`
-		EnabledRecipes       []string `yaml:"enabledRecipes"`
-		SkipPerfectAmethysts bool     `yaml:"skipPerfectAmethysts"`
-		SkipPerfectRubies    bool     `yaml:"skipPerfectRubies"`
-		JewelsToKeep         int      `yaml:"jewelsToKeep"` // new field: number of magic jewels to keep
-		PrioritizeRunewords  bool     `yaml:"prioritizeRunewords"`
+		Enabled                 bool     `yaml:"enabled"`
+		EnabledRecipes          []string `yaml:"enabledRecipes"`
+		SkipPerfectAmethysts    bool     `yaml:"skipPerfectAmethysts"`
+		SkipPerfectRubies       bool     `yaml:"skipPerfectRubies"`
+		JewelsToKeep            int      `yaml:"jewelsToKeep"` // new field: number of magic jewels to keep
+		PrioritizeRunewords     bool     `yaml:"prioritizeRunewords"`
+		EnableFullRejuvCrafting bool     `yaml:"enableFullRejuvCrafting"` // Craft Full Rejuv Potions (normal gem)
+		EnableRejuvCrafting     bool     `yaml:"enableRejuvCrafting"`     // Craft Rejuv Potions (chipped gem)
 	} `yaml:"cubing"`
 	BackToTown struct {
 		NoHpPotions     bool `yaml:"noHpPotions"`
