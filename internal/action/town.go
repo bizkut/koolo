@@ -114,15 +114,7 @@ func PreRun(firstRun bool) error {
 	// Stash before vendor
 	Stash(false)
 
-	// Refill pots, sell, buy etc
-	VendorRefill(false, true)
-
-	// Gamble
-	Gamble()
-
-	// Stash again if needed
-	Stash(false)
-
+	// Craft rejuv potions BEFORE vendor refill so gems/potions are converted first
 	if ctx.CharacterCfg.CubeRecipes.PrioritizeRunewords {
 		MakeRunewords()
 		if !isLevelingChar {
@@ -138,6 +130,15 @@ func PreRun(firstRun bool) error {
 			RerollRunewords()
 		}
 	}
+
+	// Refill pots, sell, buy etc (after rejuv crafting)
+	VendorRefill(false, true)
+
+	// Gamble
+	Gamble()
+
+	// Stash again if needed
+	Stash(false)
 
 	// After creating or rerolling runewords, stash newly created bases/runewords
 	// so we don't carry them out to the next area unnecessarily.
@@ -201,14 +202,7 @@ func InRunReturnTownRoutine() error {
 		ctx.PauseIfNotPriority() // Check after AutoEquip
 	}
 
-	VendorRefill(false, true)
-	ctx.PauseIfNotPriority() // Check after VendorRefill
-	Stash(false)
-	ctx.PauseIfNotPriority() // Check after Stash
-	Gamble()
-	ctx.PauseIfNotPriority() // Check after Gamble
-	Stash(false)
-	ctx.PauseIfNotPriority() // Check after Stash
+	// Craft rejuv potions BEFORE vendor refill so gems/potions are converted first
 	if ctx.CharacterCfg.CubeRecipes.PrioritizeRunewords {
 		MakeRunewords()
 		// Do not reroll runewords while running the leveling sequences.
@@ -219,11 +213,11 @@ func InRunReturnTownRoutine() error {
 		}
 		CubeRecipes()
 		CraftRejuvenationPotions()
-		ctx.PauseIfNotPriority() // Check after CubeRecipes
+		ctx.PauseIfNotPriority() // Check after CubeRecipes/CraftRejuv
 	} else {
 		CubeRecipes()
 		CraftRejuvenationPotions()
-		ctx.PauseIfNotPriority() // Check after CubeRecipes
+		ctx.PauseIfNotPriority() // Check after CubeRecipes/CraftRejuv
 		MakeRunewords()
 
 		// Do not reroll runewords while running the leveling sequences.
@@ -233,6 +227,15 @@ func InRunReturnTownRoutine() error {
 			RerollRunewords()
 		}
 	}
+
+	VendorRefill(false, true)
+	ctx.PauseIfNotPriority() // Check after VendorRefill
+	Stash(false)
+	ctx.PauseIfNotPriority() // Check after Stash
+	Gamble()
+	ctx.PauseIfNotPriority() // Check after Gamble
+	Stash(false)
+	ctx.PauseIfNotPriority() // Check after Stash
 
 	// Ensure any newly created or rerolled runewords/bases are stashed
 	// before leaving town.
