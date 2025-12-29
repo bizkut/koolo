@@ -160,9 +160,12 @@ func (a Leveling) act3() error {
 			utils.Sleep(500)
 			a.HoldKey(win.VK_SPACE, 3000)
 			utils.Sleep(500)
+			a.HoldKey(win.VK_SPACE, 3000)
+			utils.Sleep(500)
 			// If we successfully interacted with the Hell Gate, we assume the attempt to go to A4 is complete.
 			a.ctx.Logger.Info("Successfully attempted to enter Act 4. Ending Act 3 script.")
 			return nil
+
 		} else {
 			a.ctx.Logger.Info("Mephisto run completed, but 'The Guardian' quest is not marked as complete. Ending Act 3 script.")
 			return nil
