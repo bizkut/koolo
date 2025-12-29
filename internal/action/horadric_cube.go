@@ -32,6 +32,40 @@ func CubeAddItems(items ...data.Item) error {
 	}
 	// Clear messages like TZ change or public game spam.  Prevent bot from clicking on messages
 	ClearMessages()
+
+	// Ensure the cube is in inventory (not stash) before cubing
+	// Ctrl+Click only works to put items in cube when cube is in inventory
+	ctx.RefreshGameData()
+	cube, cubeFound := ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory, item.LocationStash, item.LocationSharedStash)
+	if !cubeFound {
+		return errors.New("horadric cube not found")
+	}
+
+	// If cube is in stash, move it to inventory first
+	if cube.Location.LocationType == item.LocationStash || cube.Location.LocationType == item.LocationSharedStash {
+		ctx.Logger.Debug("Cube is in stash, moving to inventory first")
+
+		// Switch to the correct stash tab
+		switch cube.Location.LocationType {
+		case item.LocationStash:
+			SwitchStashTab(1)
+		case item.LocationSharedStash:
+			SwitchStashTab(cube.Location.Page + 1)
+		}
+
+		// Ctrl+Click to move cube to inventory
+		screenPos := ui.GetScreenCoordsForItem(cube)
+		ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
+		utils.Sleep(300)
+		ctx.RefreshGameData()
+
+		// Verify cube is now in inventory
+		cube, cubeFound = ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory)
+		if !cubeFound {
+			return errors.New("failed to move cube to inventory")
+		}
+	}
+
 	ctx.Logger.Info("Adding items to the Horadric Cube", slog.Any("items", items))
 
 	// If items are on the Stash, pickup them to the inventory
@@ -55,6 +89,9 @@ func CubeAddItems(items ...data.Item) error {
 		ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
 		utils.Sleep(300)
 	}
+
+	// Refresh data after moving items from stash to inventory
+	ctx.RefreshGameData()
 
 	err := ensureCubeIsOpen()
 	if err != nil {
@@ -109,6 +146,32 @@ func CubeTransmute() error {
 
 		ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
 		utils.Sleep(500)
+	}
+
+	// Close cube window
+	ctx.HID.PressKey(win.VK_ESCAPE)
+	utils.Sleep(300)
+
+	// Move cube back to stash
+	ctx.RefreshGameData()
+	cube, cubeFound := ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory)
+	if cubeFound {
+		// Make sure stash is open
+		if !ctx.Data.OpenMenus.Stash {
+			bank, found := ctx.Data.Objects.FindOne(object.Bank)
+			if found {
+				InteractObject(bank, func() bool {
+					return ctx.Data.OpenMenus.Stash
+				})
+			}
+		}
+
+		if ctx.Data.OpenMenus.Stash {
+			ctx.Logger.Debug("Moving cube back to stash")
+			screenPos := ui.GetScreenCoordsForItem(cube)
+			ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
+			utils.Sleep(300)
+		}
 	}
 
 	return step.CloseAllMenus()

@@ -33,8 +33,10 @@ func (a Leveling) act3() error {
 		if err := action.InteractNPC(hratli.Name); err != nil {
 			a.ctx.Logger.Debug("Failed to interact with Hratli at pier, continuing anyway", slog.Any("error", err))
 		}
-		step.CloseAllMenus() // Close any open dialogue before continuing
-		utils.Sleep(300)     // Small delay to ensure menus are closed
+		step.CloseAllMenus() // Close any open dialogue
+		utils.Sleep(500)     // Wait for any quest popup to appear
+		step.CloseAllMenus() // Close quest popup if it appeared
+		utils.Sleep(200)     // Final delay to ensure everything is closed
 	}
 
 	running = true
