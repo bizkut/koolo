@@ -33,10 +33,24 @@ func (a Leveling) act3() error {
 		if err := action.InteractNPC(hratli.Name); err != nil {
 			a.ctx.Logger.Debug("Failed to interact with Hratli at pier, continuing anyway", slog.Any("error", err))
 		}
-		step.CloseAllMenus() // Close any open dialogue
-		utils.Sleep(500)     // Wait for any quest popup to appear
-		step.CloseAllMenus() // Close quest popup if it appeared
-		utils.Sleep(200)     // Final delay to ensure everything is closed
+		// Press ESC to close NPC dialogue first
+		a.ctx.HID.PressKey(win.VK_ESCAPE)
+		utils.Sleep(300)
+
+		// Quest log window may open automatically after talking to quest NPCs
+		// Wait a bit for it to appear, then poll/dismiss until no menus are open
+		utils.Sleep(800)
+
+		// Keep pressing ESC until no menus are detected (max 3 seconds)
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			a.ctx.RefreshGameData()
+			if !a.ctx.Data.OpenMenus.IsMenuOpen() {
+				break
+			}
+			a.ctx.HID.PressKey(win.VK_ESCAPE)
+			utils.Sleep(300)
+		}
 	}
 
 	running = true
