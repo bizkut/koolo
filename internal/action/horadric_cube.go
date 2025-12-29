@@ -209,8 +209,6 @@ func ensureCubeIsOpen() error {
 
 	// If cube is in stash, switch to the correct tab
 	if cube.Location.LocationType == item.LocationStash || cube.Location.LocationType == item.LocationSharedStash {
-		ctx := context.Get()
-
 		// Ensure stash is open
 		if !ctx.Data.OpenMenus.Stash {
 			bank, _ := ctx.Data.Objects.FindOne(object.Bank)

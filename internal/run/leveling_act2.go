@@ -179,6 +179,15 @@ func (a Leveling) act2() error {
 
 	}
 
+	// Find Horadric Cube
+	_, found := a.ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory, item.LocationStash)
+	if found {
+		a.ctx.Logger.Info("Horadric Cube found, skipping quest")
+	} else {
+		a.ctx.Logger.Info("Horadric Cube not found, starting quest")
+		return NewQuests().getHoradricCube()
+	}
+
 	// Priority 3: Your new logic - if Horadric Staff AND Summoner quests are done,
 	// then we're ready for Duriel or leveling. This will only run if the above
 	// (post-Duriel) conditions are false.
@@ -211,15 +220,6 @@ func (a Leveling) act2() error {
 
 		a.prepareStaff() // Make sure staff is prepared before Duriel
 		return a.duriel()
-	}
-
-	// Find Horadric Cube
-	_, found := a.ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory, item.LocationStash)
-	if found {
-		a.ctx.Logger.Info("Horadric Cube found, skipping quest")
-	} else {
-		a.ctx.Logger.Info("Horadric Cube not found, starting quest")
-		return NewQuests().getHoradricCube()
 	}
 
 	if a.ctx.CharacterCfg.Game.Difficulty != difficulty.Hell && !a.ctx.Data.Quests[quest.Act2RadamentsLair].Completed() {

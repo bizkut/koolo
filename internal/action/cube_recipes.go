@@ -415,6 +415,11 @@ func CubeRecipes() error {
 		return nil
 	}
 
+	if _, found := ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory, item.LocationStash, item.LocationSharedStash); !found {
+		ctx.Logger.Info("Horadric Cube not found, skipping recipes")
+		return nil
+	}
+
 	itemsInStash := ctx.Data.Inventory.ByLocation(item.LocationStash, item.LocationSharedStash)
 	for _, recipe := range Recipes {
 		// Check if the current recipe is Enabled

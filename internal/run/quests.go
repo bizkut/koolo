@@ -500,14 +500,32 @@ func (a Quests) killRadamentQuest() error {
 func (a Quests) getHoradricCube() error {
 	a.ctx.Logger.Info("Starting Retrieve the Cube Quest...")
 
-	err := action.WayPoint(area.LutGholein)
-	if err != nil {
-		return err
-	}
-
-	err = action.WayPoint(area.HallsOfTheDeadLevel2)
-	if err != nil {
-		return err
+	// Try to use Halls of the Dead Level 2 Waypoint
+	var err error
+	if err = action.WayPoint(area.HallsOfTheDeadLevel2); err != nil {
+		a.ctx.Logger.Info("Halls of the Dead Level 2 WP not found, trying Dry Hills WP")
+		if err := action.WayPoint(area.DryHills); err != nil {
+			a.ctx.Logger.Info("Dry Hills WP not found, walking from Lut Gholein")
+			if err := action.WayPoint(area.LutGholein); err != nil {
+				return err
+			}
+			if err := action.MoveToArea(area.RockyWaste); err != nil {
+				return err
+			}
+			if err := action.MoveToArea(area.DryHills); err != nil {
+				return err
+			}
+		}
+		action.Buff()
+		if err := action.MoveToArea(area.HallsOfTheDeadLevel1); err != nil {
+			return err
+		}
+		if err := action.MoveToArea(area.HallsOfTheDeadLevel2); err != nil {
+			return err
+		}
+		if err := action.DiscoverWaypoint(); err != nil {
+			a.ctx.Logger.Warn("Failed to discover Halls of the Dead Level 2 WP")
+		}
 	}
 	action.Buff()
 
