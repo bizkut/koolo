@@ -1,6 +1,7 @@
 package run
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/hectorgimenez/d2go/pkg/data"
@@ -29,7 +30,11 @@ func (a Leveling) act3() error {
 	// Try to find Hratli at pier, if he's there, talk to him, so he will move to the normal position later
 	hratli, found := a.ctx.Data.Monsters.FindOne(npc.Hratli, data.MonsterTypeNone)
 	if found {
-		action.InteractNPC(hratli.Name)
+		if err := action.InteractNPC(hratli.Name); err != nil {
+			a.ctx.Logger.Debug("Failed to interact with Hratli at pier, continuing anyway", slog.Any("error", err))
+		}
+		step.CloseAllMenus() // Close any open dialogue before continuing
+		utils.Sleep(300)     // Small delay to ensure menus are closed
 	}
 
 	running = true
