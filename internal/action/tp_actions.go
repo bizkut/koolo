@@ -159,11 +159,21 @@ func UsePortalInTown() error {
 	}
 
 	// Wait for area sync before attempting any movement
-	utils.PingSleep(utils.Medium, 500) // Medium operation: Wait for portal exit transition
+	utils.PingSleep(utils.Critical, 1000) // Critical operation: Wait for portal exit transition
 	ctx.RefreshGameData()
 	// Check for death after refreshing game data
 	if err := checkPlayerDeathForTP(ctx); err != nil {
 		return err
+	}
+
+	// Wait for area data to fully sync after portal (prevents stale data loops)
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		ctx.RefreshGameData()
+		if !ctx.Data.PlayerUnit.Area.IsTown() {
+			break // Successfully left town
+		}
+		utils.PingSleep(utils.Light, 200) // Light operation: Polling for area sync
 	}
 
 	if err := ensureAreaSync(ctx, ctx.Data.PlayerUnit.Area); err != nil {

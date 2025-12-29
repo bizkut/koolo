@@ -68,6 +68,8 @@ var (
 
 // checkPlayerDeath checks if the player is dead and returns ErrDied if so.
 func checkPlayerDeath(ctx *context.Status) error {
+	ctx.RefreshGameData() // Ensure area data is fresh before checking
+
 	if ctx.Data.PlayerUnit.Area.IsTown() {
 		return nil
 	}

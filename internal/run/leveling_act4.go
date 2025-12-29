@@ -37,6 +37,9 @@ func (a Leveling) HoldKey(keyCode byte, durationMs int) {
 
 func (a Leveling) act4() error {
 	running := false
+
+	a.ctx.RefreshGameData() // Ensure area data is fresh before checking
+
 	if running || a.ctx.Data.PlayerUnit.Area != area.ThePandemoniumFortress {
 		return nil
 	}

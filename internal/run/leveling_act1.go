@@ -24,6 +24,8 @@ import (
 
 // act1 is the main function for Act 1 leveling
 func (a Leveling) act1() error {
+	a.ctx.RefreshGameData() // Ensure area data is fresh before checking
+
 	if a.ctx.Data.PlayerUnit.Area != area.RogueEncampment {
 		return nil
 	}

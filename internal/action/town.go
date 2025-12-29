@@ -175,6 +175,16 @@ func InRunReturnTownRoutine() error {
 		return fmt.Errorf("failed to return to town: %w", err)
 	}
 
+	// Wait for area data to sync after portal transition (polling loop to handle stale data)
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		utils.PingSleep(utils.Light, 200)
+		ctx.RefreshGameData()
+		if ctx.Data.PlayerUnit.Area.IsTown() {
+			break // Successfully reached town
+		}
+	}
+
 	// Validate we're actually in town before proceeding
 	if !ctx.Data.PlayerUnit.Area.IsTown() {
 		return fmt.Errorf("failed to verify town location after portal")

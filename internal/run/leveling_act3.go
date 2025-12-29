@@ -20,6 +20,8 @@ import (
 func (a Leveling) act3() error {
 	running := false
 
+	a.ctx.RefreshGameData() // Ensure area data is fresh before checking
+
 	if running || a.ctx.Data.PlayerUnit.Area != area.KurastDocks {
 		return nil
 	}

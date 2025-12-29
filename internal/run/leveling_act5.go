@@ -23,6 +23,8 @@ import (
 )
 
 func (a Leveling) act5() error {
+	a.ctx.RefreshGameData() // Ensure area data is fresh before checking
+
 	if a.ctx.Data.PlayerUnit.Area != area.Harrogath {
 		return nil
 	}
