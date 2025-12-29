@@ -1547,6 +1547,8 @@ func (s *HttpServer) updateConfigFromForm(values url.Values, cfg *config.Charact
 		}
 		cfg.CubeRecipes.SkipPerfectAmethysts = values.Has("skipPerfectAmethysts")
 		cfg.CubeRecipes.SkipPerfectRubies = values.Has("skipPerfectRubies")
+		cfg.CubeRecipes.EnableFullRejuvCrafting = values.Has("enableFullRejuvCrafting")
+		cfg.CubeRecipes.EnableRejuvCrafting = values.Has("enableRejuvCrafting")
 		if v := values.Get("jewelsToKeep"); v != "" {
 			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 				cfg.CubeRecipes.JewelsToKeep = n
@@ -2347,6 +2349,8 @@ func (s *HttpServer) characterSettings(w http.ResponseWriter, r *http.Request) {
 		cfg.CubeRecipes.EnabledRecipes = enabledRecipes
 		cfg.CubeRecipes.SkipPerfectAmethysts = r.Form.Has("skipPerfectAmethysts")
 		cfg.CubeRecipes.SkipPerfectRubies = r.Form.Has("skipPerfectRubies")
+		cfg.CubeRecipes.EnableFullRejuvCrafting = r.Form.Has("enableFullRejuvCrafting")
+		cfg.CubeRecipes.EnableRejuvCrafting = r.Form.Has("enableRejuvCrafting")
 		// New: parse jewelsToKeep
 		if v := r.Form.Get("jewelsToKeep"); v != "" {
 			if n, err := strconv.Atoi(v); err == nil && n >= 0 {
