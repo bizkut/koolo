@@ -449,9 +449,18 @@ func ItemsToBeSold(lockConfig ...[][]int) (items []data.Item) {
 			continue
 		}
 
+		// Check NIP Rules
 		if _, result := ctx.CharacterCfg.Runtime.Rules.EvaluateAllIgnoreTiers(itm); result == nip.RuleResultFullMatch && !itm.IsPotion() {
-			// ctx.Logger.Debug(fmt.Sprintf("Keeping item %s (Matches NIP)", itm.Name)) // Verify NIP protection
 			continue
+		} else if !itm.IsPotion() {
+			// Fallback: Try evaluating with lowercase name to handle case-sensitivity issues (e.g. "GrandCharm" vs "grandcharm")
+			// This is needed because NIP files often use lowercase, but game data might use PascalCase or mixed.
+			itmCopy := itm
+			itmCopy.Name = item.Name(strings.ToLower(string(itm.Name)))
+			if _, result := ctx.CharacterCfg.Runtime.Rules.EvaluateAllIgnoreTiers(itmCopy); result == nip.RuleResultFullMatch {
+				ctx.Logger.Debug(fmt.Sprintf("Keeping item %s (Matches NIP via case-insensitive fallback)", itm.Name))
+				continue
+			}
 		}
 
 		// Hard safety: Never sell Unique Charms (Annihilus, Hellfire Torch, Gheed's Fortune)
