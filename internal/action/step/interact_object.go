@@ -187,6 +187,12 @@ func InteractObjectMouse(obj data.Object, isCompletedFn func() bool) error {
 		} else {
 			objectX := o.Position.X - 2
 			objectY := o.Position.Y - 2
+
+			// Fix for Harrogath Waypoint (429) - standard offset causes hover failure
+			if o.Name == object.ExpansionWaypoint {
+				objectX = o.Position.X
+				objectY = o.Position.Y
+			}
 			distance := ctx.PathFinder.DistanceFromMe(o.Position)
 			if distance > 15 {
 				return fmt.Errorf("object is too far away: %d. Current distance: %d", o.Name, distance)
