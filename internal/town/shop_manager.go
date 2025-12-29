@@ -450,6 +450,15 @@ func ItemsToBeSold(lockConfig ...[][]int) (items []data.Item) {
 		}
 
 		if _, result := ctx.CharacterCfg.Runtime.Rules.EvaluateAllIgnoreTiers(itm); result == nip.RuleResultFullMatch && !itm.IsPotion() {
+			// ctx.Logger.Debug(fmt.Sprintf("Keeping item %s (Matches NIP)", itm.Name)) // Verify NIP protection
+			continue
+		}
+
+		// Hard safety: Never sell Unique Charms (Annihilus, Hellfire Torch, Gheed's Fortune)
+		// correctly using case-insensitive check
+		itemName := string(itm.Name)
+		if itm.Quality == item.QualityUnique && (strings.EqualFold(itemName, "GrandCharm") || strings.EqualFold(itemName, "LargeCharm") || strings.EqualFold(itemName, "SmallCharm")) {
+			ctx.Logger.Debug(fmt.Sprintf("Keeping Unique Charm %s (Hard Safety)", itm.Name))
 			continue
 		}
 
