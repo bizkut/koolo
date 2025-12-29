@@ -2426,7 +2426,13 @@ func (s *HttpServer) characterSettings(w http.ResponseWriter, r *http.Request) {
 		if err := config.SaveKooloConfig(config.Koolo); err != nil {
 			s.logger.Error("Failed to save run favorites", slog.Any("error", err))
 		}
-		config.SaveSupervisorConfig(supervisorName, cfg)
+		if err := config.SaveSupervisorConfig(supervisorName, cfg); err != nil {
+			s.logger.Error("Failed to save supervisor config", slog.Any("error", err))
+		} else {
+			if err := s.manager.ReloadConfig(); err != nil {
+				s.logger.Error("Failed to reload config", slog.Any("error", err))
+			}
+		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
@@ -2887,6 +2893,9 @@ func (s *HttpServer) bulkApplyCharacterSettings(w http.ResponseWriter, r *http.R
 		}
 	}
 
+	if err := s.manager.ReloadConfig(); err != nil {
+		s.logger.Error("Failed to reload config", slog.Any("error", err))
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"success": true})
 }
@@ -2911,6 +2920,10 @@ func (s *HttpServer) resetMuling(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to save updated config", http.StatusInternalServerError)
 		return
+	}
+
+	if err := s.manager.ReloadConfig(); err != nil {
+		s.logger.Error("Failed to reload config", slog.Any("error", err))
 	}
 
 	w.WriteHeader(http.StatusOK)
