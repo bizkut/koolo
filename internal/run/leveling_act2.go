@@ -59,7 +59,9 @@ func (a Leveling) act2() error {
 		action.InteractNPC(npc.Meshif)
 		a.ctx.HID.KeySequence(win.VK_HOME, win.VK_DOWN, win.VK_RETURN)
 		utils.Sleep(1000)
-		a.HoldKey(win.VK_SPACE, 2000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
+		a.HoldKey(win.VK_SPACE, 3000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
 		utils.Sleep(1000)
 
 		return nil
@@ -88,7 +90,9 @@ func (a Leveling) act2() error {
 		action.InteractNPC(npc.Meshif)
 		a.ctx.HID.KeySequence(win.VK_HOME, win.VK_DOWN, win.VK_RETURN)
 		utils.Sleep(1000)
-		a.HoldKey(win.VK_SPACE, 2000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
+		a.HoldKey(win.VK_SPACE, 3000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
 		utils.Sleep(1000)
 		return nil
 	}
@@ -175,7 +179,9 @@ func (a Leveling) act2() error {
 		action.InteractNPC(npc.Meshif)
 		a.ctx.HID.KeySequence(win.VK_HOME, win.VK_DOWN, win.VK_RETURN)
 		utils.Sleep(1000)
-		a.HoldKey(win.VK_SPACE, 2000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
+		a.HoldKey(win.VK_SPACE, 3000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
 		utils.Sleep(1000)
 		return nil
 

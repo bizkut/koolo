@@ -172,19 +172,15 @@ func (a Leveling) act3() error {
 			}
 			err = action.InteractObject(hellgate, func() bool {
 				utils.Sleep(500)
-				utils.Sleep(1000)
-				a.HoldKey(win.VK_SPACE, 3000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
-				utils.Sleep(1000)
 				return a.ctx.Data.PlayerUnit.Area == area.ThePandemoniumFortress
 			})
 			if err != nil {
-				utils.Sleep(1000)
-				a.HoldKey(win.VK_SPACE, 3000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
-				utils.Sleep(1000)
 				return err // Exit on error interacting with portal
 			}
-			utils.Sleep(1000)
-			a.HoldKey(win.VK_SPACE, 3000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
+			utils.Sleep(500)
+			a.HoldKey(win.VK_SPACE, 3000)
+			utils.Sleep(500)
+			a.HoldKey(win.VK_SPACE, 3000)
 			utils.Sleep(1000)
 			return nil // Exit if successfully interacted with portal
 		}
@@ -239,19 +235,15 @@ func (a Leveling) act3() error {
 			}
 			err := action.InteractObject(hellgate, func() bool {
 				utils.Sleep(500)
-				utils.Sleep(1000)
-				a.HoldKey(win.VK_SPACE, 2000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
-				utils.Sleep(1000)
 				return a.ctx.Data.PlayerUnit.Area == area.ThePandemoniumFortress
 			})
 			if err != nil {
-				utils.Sleep(1000)
-				a.HoldKey(win.VK_SPACE, 2000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
-				utils.Sleep(1000)
 				return err // Exit on error interacting with portal
 			}
-			utils.Sleep(1000)
-			a.HoldKey(win.VK_SPACE, 2000) // Hold the Escape key (VK_ESCAPE or 0x1B) for 2000 milliseconds (2 seconds)
+			utils.Sleep(500)
+			a.HoldKey(win.VK_SPACE, 3000)
+			utils.Sleep(500)
+			a.HoldKey(win.VK_SPACE, 3000)
 			utils.Sleep(1000)
 			return nil // Exit if successfully interacted with portal
 		}

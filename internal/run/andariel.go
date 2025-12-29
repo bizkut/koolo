@@ -310,6 +310,8 @@ func (a Andariel) goToAct2() {
 	action.InteractNPC(npc.Warriv)
 	a.ctx.HID.KeySequence(win.VK_HOME, win.VK_DOWN, win.VK_RETURN)
 	utils.Sleep(1000)
-	action.HoldKey(win.VK_SPACE, 2000)
+	action.HoldKey(win.VK_SPACE, 3000)
+	utils.Sleep(500)
+	action.HoldKey(win.VK_SPACE, 3000)
 	utils.Sleep(1000)
 }

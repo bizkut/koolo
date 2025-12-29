@@ -81,10 +81,10 @@ func (a Leveling) act4() error {
 		})
 
 		// Skip Cinematic
-		utils.Sleep(2000)
-		a.HoldKey(win.VK_SPACE, 2000)
-		utils.Sleep(2000)
-		a.HoldKey(win.VK_SPACE, 2000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
 
 		return nil
 	}
@@ -166,10 +166,10 @@ func (a Leveling) act4() error {
 		})
 
 		// Skip Cinematic
-		utils.Sleep(2000)
-		a.HoldKey(win.VK_SPACE, 2000)
-		utils.Sleep(2000)
-		a.HoldKey(win.VK_SPACE, 2000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
 
 		return nil
 	}
@@ -207,10 +207,10 @@ func (a Leveling) act4() error {
 		})
 
 		// Skip Cinematic
-		utils.Sleep(2000)
-		a.HoldKey(win.VK_SPACE, 2000)
-		utils.Sleep(2000)
-		a.HoldKey(win.VK_SPACE, 2000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
+		utils.Sleep(500)
+		a.HoldKey(win.VK_SPACE, 3000)
 
 		return nil
 	}
