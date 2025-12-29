@@ -255,7 +255,7 @@ func (a Leveling) AdjustDifficultyConfig() {
 			a.ctx.CharacterCfg.Health.HealingPotionAt = 85
 			a.ctx.CharacterCfg.Health.ChickenAt = 45
 			a.ctx.CharacterCfg.Health.RejuvPotionAtLife = 60
-			a.ctx.CharacterCfg.Health.RejuvPotionAtMana = 25
+			// RejuvPotionAtMana removed - use user's configured value
 			a.ctx.CharacterCfg.Health.ManaPotionAt = 50
 			a.ctx.CharacterCfg.Health.TownChickenAt = 50
 			a.ctx.CharacterCfg.Character.ClearPathDist = 15
