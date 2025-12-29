@@ -35,32 +35,39 @@
     }
 
     // Reload logs from the server - can be called on WebSocket reconnect
+    // Loads ALL sources to preserve supervisor logs across page refresh
     function reloadLogsFromServer() {
-        fetch(`/api/logs?source=${currentSource}&last=500`)
-            .then(r => r.json())
-            .then(logs => {
-                if (Array.isArray(logs)) {
-                    // Merge with existing logs to avoid duplicates
-                    const existingLogs = getSourceLogs(currentSource);
-                    const existingTimestamps = new Set(existingLogs.map(e => e.timestamp + e.message));
-                    
-                    logs.forEach(log => {
-                        const key = log.timestamp + log.message;
-                        if (!existingTimestamps.has(key)) {
-                            addLogEntry(log, false);
-                        }
-                    });
-                    renderLogs();
-                }
-            })
-            .catch(err => console.error('Failed to load logs:', err));
-
-        // Load available sources
+        // Load available sources first, then load logs for ALL sources
         fetch('/api/logs/sources')
             .then(r => r.json())
             .then(sources => {
                 if (Array.isArray(sources)) {
+                    // Add tabs for all sources
                     sources.forEach(s => addSourceTab(s));
+
+                    // Load logs for ALL sources to preserve them across page refresh
+                    const loadPromises = sources.map(source =>
+                        fetch(`/api/logs?source=${encodeURIComponent(source)}&last=500`)
+                            .then(r => r.json())
+                            .then(logs => {
+                                if (Array.isArray(logs)) {
+                                    // Merge with existing logs to avoid duplicates
+                                    const existingLogs = getSourceLogs(source);
+                                    const existingTimestamps = new Set(existingLogs.map(e => e.timestamp + e.message));
+
+                                    logs.forEach(log => {
+                                        const key = log.timestamp + log.message;
+                                        if (!existingTimestamps.has(key)) {
+                                            addLogEntry(log, false);
+                                        }
+                                    });
+                                }
+                            })
+                            .catch(err => console.error(`Failed to load logs for ${source}:`, err))
+                    );
+
+                    // After all sources are loaded, render the current source
+                    Promise.all(loadPromises).then(() => renderLogs());
                 }
             })
             .catch(err => console.error('Failed to load log sources:', err));
