@@ -449,6 +449,48 @@ func ItemsToBeSold(lockConfig ...[][]int) (items []data.Item) {
 			continue
 		}
 
+		// Charm Protection (mirrors stash logic): When CharmManager is enabled,
+		// protect charms that would be kept by the stash logic
+		itmNameStr := string(itm.Name)
+		isCharm := strings.EqualFold(itmNameStr, "SmallCharm") ||
+			strings.EqualFold(itmNameStr, "LargeCharm") ||
+			strings.EqualFold(itmNameStr, "GrandCharm")
+		if isCharm && ctx.CharacterCfg.CharmManager.Enabled {
+			// Count charms of the same type in inventory
+			sameTypeCount := 0
+			bestScore := -1.0
+			var bestCharmID data.UnitID
+			for _, invCharm := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+				invCharmName := string(invCharm.Name)
+				if strings.EqualFold(invCharmName, itmNameStr) {
+					sameTypeCount++
+					// Simple scoring based on life stat (primary value for most charms)
+					score := 0.0
+					if lifeStat, found := invCharm.FindStat(stat.MaxLife, 0); found {
+						score += float64(lifeStat.Value)
+					}
+					if mfStat, found := invCharm.FindStat(stat.MagicFind, 0); found {
+						score += float64(mfStat.Value) * 1.5
+					}
+					if gfStat, found := invCharm.FindStat(stat.GoldFind, 0); found {
+						score += float64(gfStat.Value) * 0.5
+					}
+					if score > bestScore {
+						bestScore = score
+						bestCharmID = invCharm.UnitID
+					}
+				}
+			}
+
+			// If only 1 charm of this type, or this IS the best one, don't sell
+			if sameTypeCount <= 1 || itm.UnitID == bestCharmID {
+				ctx.Logger.Debug(fmt.Sprintf("CharmProtection: Keeping charm %s (count=%d, isBest=%v)",
+					itm.Name, sameTypeCount, itm.UnitID == bestCharmID))
+				continue
+			}
+			// Extra charms can be sold if they don't match NIP (fall through to NIP check)
+		}
+
 		// Check NIP Rules
 		if _, result := ctx.CharacterCfg.Runtime.Rules.EvaluateAllIgnoreTiers(itm); result == nip.RuleResultFullMatch && !itm.IsPotion() {
 			continue
