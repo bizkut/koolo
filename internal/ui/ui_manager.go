@@ -67,19 +67,19 @@ func GetScreenCoordsForInventoryPosition(pos data.Position, loc item.LocationTyp
 func getScreenCoordsForItem(itm data.Item) data.Position {
 	switch itm.Location.LocationType {
 	case item.LocationVendor, item.LocationStash, item.LocationSharedStash:
-		x := topCornerVendorWindowX + itm.Position.X*ItemBoxSize + (ItemBoxSize / 2)
-		y := topCornerVendorWindowY + itm.Position.Y*ItemBoxSize + (ItemBoxSize / 2)
+		x := topCornerVendorWindowX + itm.Position.X*itemBoxSize + (itemBoxSize / 2)
+		y := topCornerVendorWindowY + itm.Position.Y*itemBoxSize + (itemBoxSize / 2)
 
 		return data.Position{X: x, Y: y}
 	case item.LocationCube:
-		x := TopCornerCubeWindowX + itm.Position.X*ItemBoxSize + (ItemBoxSize / 2)
-		y := TopCornerCubeWindowY + itm.Position.Y*ItemBoxSize + (ItemBoxSize / 2)
+		x := topCornerCubeWindowX + itm.Position.X*itemBoxSize + (itemBoxSize / 2)
+		y := topCornerCubeWindowY + itm.Position.Y*itemBoxSize + (itemBoxSize / 2)
 
 		return data.Position{X: x, Y: y}
 	}
 
-	x := inventoryTopLeftX + itm.Position.X*ItemBoxSize + (ItemBoxSize / 2)
-	y := inventoryTopLeftY + itm.Position.Y*ItemBoxSize + (ItemBoxSize / 2)
+	x := inventoryTopLeftX + itm.Position.X*itemBoxSize + (itemBoxSize / 2)
+	y := inventoryTopLeftY + itm.Position.Y*itemBoxSize + (itemBoxSize / 2)
 
 	return data.Position{X: x, Y: y}
 }
@@ -87,19 +87,19 @@ func getScreenCoordsForItem(itm data.Item) data.Position {
 func getScreenCoordsForInventoryPosition(pos data.Position, loc item.LocationType) data.Position {
 	switch loc {
 	case item.LocationVendor, item.LocationStash, item.LocationSharedStash:
-		x := topCornerVendorWindowX + pos.X*ItemBoxSize + (ItemBoxSize / 2)
-		y := topCornerVendorWindowY + pos.Y*ItemBoxSize + (ItemBoxSize / 2)
+		x := topCornerVendorWindowX + pos.X*itemBoxSize + (itemBoxSize / 2)
+		y := topCornerVendorWindowY + pos.Y*itemBoxSize + (itemBoxSize / 2)
 
 		return data.Position{X: x, Y: y}
 	case item.LocationCube:
-		x := TopCornerCubeWindowX + pos.X*ItemBoxSize + (ItemBoxSize / 2)
-		y := TopCornerCubeWindowY + pos.Y*ItemBoxSize + (ItemBoxSize / 2)
+		x := topCornerCubeWindowX + pos.X*itemBoxSize + (itemBoxSize / 2)
+		y := topCornerCubeWindowY + pos.Y*itemBoxSize + (itemBoxSize / 2)
 
 		return data.Position{X: x, Y: y}
 	}
 
-	x := inventoryTopLeftX + pos.X*ItemBoxSize + (ItemBoxSize / 2)
-	y := inventoryTopLeftY + pos.Y*ItemBoxSize + (ItemBoxSize / 2)
+	x := inventoryTopLeftX + pos.X*itemBoxSize + (itemBoxSize / 2)
+	y := inventoryTopLeftY + pos.Y*itemBoxSize + (itemBoxSize / 2)
 
 	return data.Position{X: x, Y: y}
 }
@@ -107,19 +107,19 @@ func getScreenCoordsForInventoryPosition(pos data.Position, loc item.LocationTyp
 func getScreenCoordsForItemClassic(itm data.Item) data.Position {
 	switch itm.Location.LocationType {
 	case item.LocationVendor, item.LocationStash, item.LocationSharedStash:
-		x := topCornerVendorWindowXClassic + itm.Position.X*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
-		y := topCornerVendorWindowYClassic + itm.Position.Y*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
+		x := topCornerVendorWindowXClassic + itm.Position.X*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
+		y := topCornerVendorWindowYClassic + itm.Position.Y*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
 
 		return data.Position{X: x, Y: y}
 	case item.LocationCube:
-		x := TopCornerCubeWindowXClassic + itm.Position.X*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
-		y := TopCornerCubeWindowYClassic + itm.Position.Y*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
+		x := topCornerCubeWindowXClassic + itm.Position.X*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
+		y := topCornerCubeWindowYClassic + itm.Position.Y*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
 
 		return data.Position{X: x, Y: y}
 	}
 
-	x := inventoryTopLeftXClassic + itm.Position.X*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
-	y := inventoryTopLeftYClassic + itm.Position.Y*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
+	x := inventoryTopLeftXClassic + itm.Position.X*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
+	y := inventoryTopLeftYClassic + itm.Position.Y*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
 
 	return data.Position{X: x, Y: y}
 }
@@ -127,19 +127,19 @@ func getScreenCoordsForItemClassic(itm data.Item) data.Position {
 func getScreenCoordsForInventoryPositionClassic(pos data.Position, loc item.LocationType) data.Position {
 	switch loc {
 	case item.LocationVendor, item.LocationStash, item.LocationSharedStash:
-		x := topCornerVendorWindowXClassic + pos.X*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
-		y := topCornerVendorWindowYClassic + pos.Y*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
+		x := topCornerVendorWindowXClassic + pos.X*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
+		y := topCornerVendorWindowYClassic + pos.Y*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
 
 		return data.Position{X: x, Y: y}
 	case item.LocationCube:
-		x := TopCornerCubeWindowXClassic + pos.X*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
-		y := TopCornerCubeWindowYClassic + pos.Y*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
+		x := topCornerCubeWindowXClassic + pos.X*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
+		y := topCornerCubeWindowYClassic + pos.Y*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
 
 		return data.Position{X: x, Y: y}
 	}
 
-	x := inventoryTopLeftXClassic + pos.X*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
-	y := inventoryTopLeftYClassic + pos.Y*ItemBoxSizeClassic + (ItemBoxSizeClassic / 2)
+	x := inventoryTopLeftXClassic + pos.X*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
+	y := inventoryTopLeftYClassic + pos.Y*itemBoxSizeClassic + (itemBoxSizeClassic / 2)
 
 	return data.Position{X: x, Y: y}
 }

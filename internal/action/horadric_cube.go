@@ -66,45 +66,15 @@ func CubeAddItems(items ...data.Item) error {
 		return err
 	}
 
-	ctx.RefreshGameData()
-	cube, found := ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory, item.LocationStash, item.LocationSharedStash)
-	if !found {
-		return errors.New("horadric cube not found")
-	}
-
 	for _, itm := range items {
 		for _, updatedItem := range ctx.Data.Inventory.AllItems {
 			if itm.UnitID == updatedItem.UnitID {
 				ctx.Logger.Debug("Moving Item to the Horadric Cube", slog.String("Item", string(itm.Name)))
 
-				// If Cube is in Stash, we must Drag-and-Drop because Ctrl+Click will stash the item
-				if cube.Location.LocationType == item.LocationStash || cube.Location.LocationType == item.LocationSharedStash {
-					// Drag the item
-					screenPos := ui.GetScreenCoordsForItem(updatedItem)
-					ctx.HID.MovePointer(screenPos.X, screenPos.Y)
-					utils.Sleep(100)
-					ctx.HID.Click(game.LeftButton, screenPos.X, screenPos.Y)
-					utils.Sleep(200)
+				screenPos := ui.GetScreenCoordsForItem(updatedItem)
 
-					// Drop on the Cube Window
-					// We drop it in the top-left slot of the cube (offset slightly to be safe)
-					cubeX := ui.TopCornerCubeWindowX + ui.ItemBoxSize/2
-					cubeY := ui.TopCornerCubeWindowY + ui.ItemBoxSize/2
-					if ctx.Data.LegacyGraphics {
-						cubeX = ui.TopCornerCubeWindowXClassic + ui.ItemBoxSizeClassic/2
-						cubeY = ui.TopCornerCubeWindowYClassic + ui.ItemBoxSizeClassic/2
-					}
-
-					ctx.HID.MovePointer(cubeX, cubeY)
-					utils.Sleep(200)
-					ctx.HID.Click(game.LeftButton, cubeX, cubeY)
-					utils.Sleep(300)
-				} else {
-					// Use existing Ctrl+Click method for Inventory-based Cube
-					screenPos := ui.GetScreenCoordsForItem(updatedItem)
-					ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
-					utils.Sleep(500)
-				}
+				ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
+				utils.Sleep(500)
 			}
 		}
 	}
@@ -194,7 +164,6 @@ func ensureCubeIsEmpty() error {
 
 func ensureCubeIsOpen() error {
 	ctx := context.Get()
-	ctx.RefreshGameData()
 	ctx.Logger.Debug("Opening Horadric Cube...")
 
 	if ctx.Data.OpenMenus.Cube {
@@ -202,13 +171,15 @@ func ensureCubeIsOpen() error {
 		return nil
 	}
 
-	cube, found := ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory, item.LocationStash, item.LocationSharedStash)
+	cube, found := ctx.Data.Inventory.Find("HoradricCube", item.LocationInventory, item.LocationStash)
 	if !found {
 		return errors.New("horadric cube not found in inventory")
 	}
 
 	// If cube is in stash, switch to the correct tab
 	if cube.Location.LocationType == item.LocationStash || cube.Location.LocationType == item.LocationSharedStash {
+		ctx := context.Get()
+
 		// Ensure stash is open
 		if !ctx.Data.OpenMenus.Stash {
 			bank, _ := ctx.Data.Objects.FindOne(object.Bank)

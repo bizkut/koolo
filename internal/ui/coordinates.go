@@ -1,8 +1,8 @@
 package ui
 
 const (
-	ItemBoxSize        = 33
-	ItemBoxSizeClassic = 35
+	itemBoxSize        = 33
+	itemBoxSizeClassic = 35
 
 	inventoryTopLeftX        = 846
 	inventoryTopLeftXClassic = 663
@@ -16,11 +16,11 @@ const (
 	topCornerVendorWindowY        = 147
 	topCornerVendorWindowYClassic = 149
 
-	TopCornerCubeWindowX        = 222
-	TopCornerCubeWindowXClassic = 398
+	topCornerCubeWindowX        = 222
+	topCornerCubeWindowXClassic = 398
 
-	TopCornerCubeWindowY        = 247
-	TopCornerCubeWindowYClassic = 239
+	topCornerCubeWindowY        = 247
+	topCornerCubeWindowYClassic = 239
 
 	MercAvatarPositionX        = 36
 	MercAvatarPositionXClassic = 208
