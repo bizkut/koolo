@@ -299,24 +299,26 @@ func shouldStashIt(i data.Item, firstRun bool) (bool, bool, string, string) {
 			}
 			ctx.Logger.Debug(fmt.Sprintf("CharmManager: Stashing extra charm %s (score=%.1f, best=%.1f)",
 				i.Name, getCharmScore(i), bestScore))
-			// Fall through to normal stash logic
+			// Explicitly stash this extra charm
+			return true, false, "CharmManager: Extra charm", ""
 		} else {
 			// CharmManager disabled: Keep all charms (don't stash any)
-			ctx.Logger.Debug(fmt.Sprintf("CharmProtection: CharmManager disabled, keeping all charms"))
+			ctx.Logger.Debug("CharmProtection: CharmManager disabled, keeping all charms")
 			return false, false, "", ""
 		}
 	}
 
 	// These items should NEVER be stashed, regardless of quest status, pickit rules, or first run.
-	if i.Name == "horadricstaff" {
+	if strings.EqualFold(string(i.Name), "horadricstaff") {
 		return false, false, "", ""
 	}
 
-	if i.Name == "TomeOfTownPortal" || i.Name == "TomeOfIdentify" || i.Name == "Key" || i.Name == "WirtsLeg" {
+	if strings.EqualFold(string(i.Name), "TomeOfTownPortal") || strings.EqualFold(string(i.Name), "TomeOfIdentify") || strings.EqualFold(string(i.Name), "Key") || strings.EqualFold(string(i.Name), "WirtsLeg") {
 		return false, false, "", ""
 	}
 
-	if _, isLevelingChar := ctx.Char.(context.LevelingCharacter); isLevelingChar && i.IsFromQuest() && i.Name != "HoradricCube" || i.Name == "HoradricStaff" {
+	itemNameStr := string(i.Name)
+	if _, isLevelingChar := ctx.Char.(context.LevelingCharacter); isLevelingChar && i.IsFromQuest() && !strings.EqualFold(itemNameStr, "HoradricCube") || strings.EqualFold(itemNameStr, "HoradricStaff") {
 		return false, false, "", ""
 	}
 
