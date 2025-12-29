@@ -16,15 +16,21 @@ import (
 	"github.com/lxn/win"
 )
 
-// Cheap potions that can be used for crafting (minor and light only)
-var cheapHealingPotions = []item.Name{
+// Potions that can be used for crafting (any HP/MP potion works in the cube recipe)
+var craftableHealingPotions = []item.Name{
 	"MinorHealingPotion",
 	"LightHealingPotion",
+	"HealingPotion",
+	"GreaterHealingPotion",
+	"SuperHealingPotion",
 }
 
-var cheapManaPotions = []item.Name{
+var craftableManaPotions = []item.Name{
 	"MinorManaPotion",
 	"LightManaPotion",
+	"ManaPotion",
+	"GreaterManaPotion",
+	"SuperManaPotion",
 }
 
 // Normal gems for Full Rejuv crafting
@@ -51,8 +57,8 @@ var chippedGems = []item.Name{
 
 const (
 	minGoldForCrafting = 5000
-	potionsPerCraft    = 3   // 3 HP + 3 MP per rejuv
-	goldPerCraft       = 500 // Safety buffer for buying potions (typ. <200g)
+	potionsPerCraft    = 3    // 3 HP + 3 MP per rejuv
+	goldPerCraft       = 3000 // Safety buffer for buying potions (Super potions can cost ~500g each)
 )
 
 // CraftRejuvenationPotions crafts rejuv potions using cube recipes
@@ -239,16 +245,16 @@ func getCheapPotionsForCrafting(ctx *context.Status) ([]data.Item, []data.Item, 
 	var hpPotions, mpPotions []data.Item
 
 	for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
-		// Check if it's a cheap healing potion
-		for _, cheapHP := range cheapHealingPotions {
-			if itm.Name == cheapHP {
+		// Check if it's a craftable healing potion
+		for _, potionType := range craftableHealingPotions {
+			if itm.Name == potionType {
 				hpPotions = append(hpPotions, itm)
 				break
 			}
 		}
-		// Check if it's a cheap mana potion
-		for _, cheapMP := range cheapManaPotions {
-			if itm.Name == cheapMP {
+		// Check if it's a craftable mana potion
+		for _, potionType := range craftableManaPotions {
+			if itm.Name == potionType {
 				mpPotions = append(mpPotions, itm)
 				break
 			}
@@ -289,21 +295,39 @@ func buyPotionsForCrafting(ctx *context.Status, hpNeeded, mpNeeded int) error {
 	SwitchVendorTab(4)
 	ctx.RefreshGameData()
 
-	// Find and buy Minor healing potions only (cheapest)
+	// Potion types from cheapest to most expensive
+	healingPotionTypes := []item.Name{"MinorHealingPotion", "LightHealingPotion", "HealingPotion", "GreaterHealingPotion", "SuperHealingPotion"}
+	manaPotionTypes := []item.Name{"MinorManaPotion", "LightManaPotion", "ManaPotion", "GreaterManaPotion", "SuperManaPotion"}
+
+	// Find and buy cheapest available healing potion
 	if hpNeeded > 0 {
-		if itm, found := ctx.Data.Inventory.Find("MinorHealingPotion", item.LocationVendor); found {
-			buyPotionFromVendor(ctx, itm, hpNeeded)
-		} else {
-			ctx.Logger.Warn("Minor Healing Potion not found at vendor")
+		bought := false
+		for _, potionType := range healingPotionTypes {
+			if itm, found := ctx.Data.Inventory.Find(potionType, item.LocationVendor); found {
+				ctx.Logger.Debug("Buying healing potion for crafting", slog.String("type", string(potionType)))
+				buyPotionFromVendor(ctx, itm, hpNeeded)
+				bought = true
+				break
+			}
+		}
+		if !bought {
+			ctx.Logger.Warn("No healing potions found at vendor for crafting")
 		}
 	}
 
-	// Find and buy Minor mana potions only (cheapest)
+	// Find and buy cheapest available mana potion
 	if mpNeeded > 0 {
-		if itm, found := ctx.Data.Inventory.Find("MinorManaPotion", item.LocationVendor); found {
-			buyPotionFromVendor(ctx, itm, mpNeeded)
-		} else {
-			ctx.Logger.Warn("Minor Mana Potion not found at vendor")
+		bought := false
+		for _, potionType := range manaPotionTypes {
+			if itm, found := ctx.Data.Inventory.Find(potionType, item.LocationVendor); found {
+				ctx.Logger.Debug("Buying mana potion for crafting", slog.String("type", string(potionType)))
+				buyPotionFromVendor(ctx, itm, mpNeeded)
+				bought = true
+				break
+			}
+		}
+		if !bought {
+			ctx.Logger.Warn("No mana potions found at vendor for crafting")
 		}
 	}
 
