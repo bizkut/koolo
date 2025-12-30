@@ -84,17 +84,31 @@ func CraftRejuvenationPotions() error {
 		return nil
 	}
 
-	// Calculate how many rejuvs we need
-	targetCount := ctx.CharacterCfg.Inventory.RejuvPotionCount
-	currentCount := countCurrentRejuvs(ctx)
-	needed := targetCount - currentCount
+	// Calculate how many rejuvs we need:
+	// 1. Belt missing count (columns configured for rejuvs minus current belt count)
+	// 2. Inventory target count minus current inventory count
+	beltMissing := ctx.BeltManager.GetMissingCount(data.RejuvenationPotion)
+	invMissing := ctx.Data.MissingPotionCountInInventory(data.RejuvenationPotion)
+	needed := beltMissing + invMissing
 
 	if needed <= 0 {
-		ctx.Logger.Debug("Already have enough rejuv potions", slog.Int("current", currentCount), slog.Int("target", targetCount))
+		currentCount := countCurrentRejuvs(ctx)
+		targetCount := ctx.CharacterCfg.Inventory.RejuvPotionCount
+		ctx.Logger.Debug("Already have enough rejuv potions",
+			slog.Int("current", currentCount),
+			slog.Int("target", targetCount),
+			slog.Int("beltMissing", beltMissing),
+			slog.Int("invMissing", invMissing))
 		return nil
 	}
 
-	ctx.Logger.Info("Crafting rejuvenation potions", slog.Int("needed", needed), slog.Int("current", currentCount))
+	// Check if inventory has space for potions (rejuv potions are 1x1)
+	if !hasInventorySpaceForItem(ctx, 1, 1) {
+		ctx.Logger.Debug("Inventory full, skipping rejuv crafting")
+		return nil
+	}
+
+	ctx.Logger.Info("Crafting rejuvenation potions", slog.Int("needed", needed), slog.Int("beltMissing", beltMissing), slog.Int("invMissing", invMissing))
 
 	crafted := 0
 
@@ -163,6 +177,44 @@ func countCurrentRejuvs(ctx *context.Status) int {
 		}
 	}
 	return count
+}
+
+// hasInventorySpaceForItem checks if there's room for an item of given size
+func hasInventorySpaceForItem(ctx *context.Status, width, height int) bool {
+	invMatrix := ctx.Data.Inventory.Matrix()
+
+	// Safety check for empty inventory matrix
+	if len(invMatrix) == 0 || len(invMatrix[0]) == 0 {
+		return false
+	}
+
+	// Check if dimensions are valid
+	if height > len(invMatrix) || width > len(invMatrix[0]) {
+		return false
+	}
+
+	for y := 0; y <= len(invMatrix)-height; y++ {
+		for x := 0; x <= len(invMatrix[0])-width; x++ {
+			freeSpace := true
+			for dy := 0; dy < height; dy++ {
+				for dx := 0; dx < width; dx++ {
+					if invMatrix[y+dy][x+dx] {
+						freeSpace = false
+						break
+					}
+				}
+				if !freeSpace {
+					break
+				}
+			}
+
+			if freeSpace {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func getAvailableGems(ctx *context.Status, gemTypes []item.Name) []data.Item {
