@@ -84,12 +84,9 @@ func CraftRejuvenationPotions() error {
 		return nil
 	}
 
-	// Calculate total rejuv capacity needed:
-	// - Belt: columns configured for rejuvs * belt rows
-	// - Inventory: RejuvPotionCount config setting
-	beltCapacity := ctx.CharacterCfg.Inventory.BeltColumns.Total(data.RejuvenationPotion) * ctx.Data.Inventory.Belt.Rows()
-	invTarget := ctx.CharacterCfg.Inventory.RejuvPotionCount
-	maxNeeded := beltCapacity + invTarget
+	// maxNeeded is the total rejuv count to maintain (RejuvPotionCount from WebGUI)
+	// This covers both belt and inventory - whichever needs filling
+	maxNeeded := ctx.CharacterCfg.Inventory.RejuvPotionCount
 
 	// Count current total rejuvs (belt + inventory)
 	currentTotal := countCurrentRejuvs(ctx)
@@ -98,9 +95,7 @@ func CraftRejuvenationPotions() error {
 	if currentTotal >= maxNeeded {
 		ctx.Logger.Debug("Already have enough rejuv potions",
 			slog.Int("currentTotal", currentTotal),
-			slog.Int("maxNeeded", maxNeeded),
-			slog.Int("beltCapacity", beltCapacity),
-			slog.Int("invTarget", invTarget))
+			slog.Int("maxNeeded", maxNeeded))
 		return nil
 	}
 

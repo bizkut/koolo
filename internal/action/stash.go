@@ -677,6 +677,8 @@ func StashExcessRejuvs() int {
 	ctx := context.Get()
 	ctx.SetLastAction("StashExcessRejuvs")
 
+	ctx.Logger.Debug("StashExcessRejuvs called")
+
 	targetCount := ctx.CharacterCfg.Inventory.RejuvPotionCount
 
 	// Count rejuvs in inventory (not belt)
