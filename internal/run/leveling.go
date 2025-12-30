@@ -261,7 +261,7 @@ func (a Leveling) AdjustDifficultyConfig() {
 			a.ctx.CharacterCfg.Character.ClearPathDist = 15
 			a.ctx.CharacterCfg.Inventory.HealingPotionCount = 5
 			a.ctx.CharacterCfg.Inventory.ManaPotionCount = 5
-			a.ctx.CharacterCfg.Inventory.RejuvPotionCount = 10
+			a.ctx.CharacterCfg.Inventory.RejuvPotionCount = 5
 
 		case difficulty.Hell:
 			a.ctx.CharacterCfg.Inventory.BeltColumns = [4]string{"healing", "mana", "rejuvenation", "rejuvenation"}
@@ -274,7 +274,7 @@ func (a Leveling) AdjustDifficultyConfig() {
 			a.ctx.CharacterCfg.Character.ClearPathDist = 15
 			a.ctx.CharacterCfg.Inventory.HealingPotionCount = 5
 			a.ctx.CharacterCfg.Inventory.ManaPotionCount = 5
-			a.ctx.CharacterCfg.Inventory.RejuvPotionCount = 10
+			a.ctx.CharacterCfg.Inventory.RejuvPotionCount = 5
 		}
 	}
 
