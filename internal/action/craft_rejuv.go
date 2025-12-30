@@ -84,23 +84,28 @@ func CraftRejuvenationPotions() error {
 		return nil
 	}
 
-	// Calculate how many rejuvs we need:
-	// 1. Belt missing count (columns configured for rejuvs minus current belt count)
-	// 2. Inventory target count minus current inventory count
-	beltMissing := ctx.BeltManager.GetMissingCount(data.RejuvenationPotion)
-	invMissing := ctx.Data.MissingPotionCountInInventory(data.RejuvenationPotion)
-	needed := beltMissing + invMissing
+	// Calculate total rejuv capacity needed:
+	// - Belt: columns configured for rejuvs * belt rows
+	// - Inventory: RejuvPotionCount config setting
+	beltCapacity := ctx.CharacterCfg.Inventory.BeltColumns.Total(data.RejuvenationPotion) * ctx.Data.Inventory.Belt.Rows()
+	invTarget := ctx.CharacterCfg.Inventory.RejuvPotionCount
+	maxNeeded := beltCapacity + invTarget
 
-	if needed <= 0 {
-		currentCount := countCurrentRejuvs(ctx)
-		targetCount := ctx.CharacterCfg.Inventory.RejuvPotionCount
+	// Count current total rejuvs (belt + inventory)
+	currentTotal := countCurrentRejuvs(ctx)
+
+	// Don't craft if we already have enough or more than max needed
+	if currentTotal >= maxNeeded {
 		ctx.Logger.Debug("Already have enough rejuv potions",
-			slog.Int("current", currentCount),
-			slog.Int("target", targetCount),
-			slog.Int("beltMissing", beltMissing),
-			slog.Int("invMissing", invMissing))
+			slog.Int("currentTotal", currentTotal),
+			slog.Int("maxNeeded", maxNeeded),
+			slog.Int("beltCapacity", beltCapacity),
+			slog.Int("invTarget", invTarget))
 		return nil
 	}
+
+	// Calculate how many we actually need to craft
+	needed := maxNeeded - currentTotal
 
 	// Check if inventory has space for potions (rejuv potions are 1x1)
 	if !hasInventorySpaceForItem(ctx, 1, 1) {
@@ -108,7 +113,10 @@ func CraftRejuvenationPotions() error {
 		return nil
 	}
 
-	ctx.Logger.Info("Crafting rejuvenation potions", slog.Int("needed", needed), slog.Int("beltMissing", beltMissing), slog.Int("invMissing", invMissing))
+	ctx.Logger.Info("Crafting rejuvenation potions",
+		slog.Int("needed", needed),
+		slog.Int("currentTotal", currentTotal),
+		slog.Int("maxNeeded", maxNeeded))
 
 	crafted := 0
 
