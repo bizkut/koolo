@@ -132,6 +132,11 @@ func CraftRejuvenationPotions() error {
 				ctx.Logger.Debug("Not enough gold to buy potions for crafting")
 				break
 			}
+			// Re-check inventory space before each craft
+			if !hasInventorySpaceForItem(ctx, 1, 1) {
+				ctx.Logger.Debug("Inventory full during crafting loop")
+				break
+			}
 			if err := craftSingleRejuv(ctx, gem, true); err != nil {
 				ctx.Logger.Warn("Failed to craft full rejuv", slog.String("error", err.Error()))
 				continue
@@ -152,6 +157,11 @@ func CraftRejuvenationPotions() error {
 			// Check gold before each craft
 			if ctx.Data.PlayerUnit.TotalPlayerGold() < goldPerCraft {
 				ctx.Logger.Debug("Not enough gold to buy potions for crafting")
+				break
+			}
+			// Re-check inventory space before each craft
+			if !hasInventorySpaceForItem(ctx, 1, 1) {
+				ctx.Logger.Debug("Inventory full during crafting loop")
 				break
 			}
 			if err := craftSingleRejuv(ctx, gem, false); err != nil {
