@@ -86,7 +86,7 @@ func CraftRejuvenationPotions() error {
 
 	// Calculate total rejuv capacity needed:
 	// - Belt: columns configured for rejuvs * belt rows
-	// - Inventory: RejuvPotionCount config setting
+	// - Inventory: RejuvPotionCount config setting (inventory-only, like healing/mana)
 	beltCapacity := ctx.CharacterCfg.Inventory.BeltColumns.Total(data.RejuvenationPotion) * ctx.Data.Inventory.Belt.Rows()
 	invTarget := ctx.CharacterCfg.Inventory.RejuvPotionCount
 	maxNeeded := beltCapacity + invTarget
