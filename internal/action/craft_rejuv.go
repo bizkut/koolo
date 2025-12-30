@@ -84,23 +84,28 @@ func CraftRejuvenationPotions() error {
 		return nil
 	}
 
-	// Calculate how many rejuvs we need:
-	// 1. Belt missing count (columns configured for rejuvs minus current belt count)
-	// 2. Inventory target count minus current inventory count
-	beltMissing := ctx.BeltManager.GetMissingCount(data.RejuvenationPotion)
-	invMissing := ctx.Data.MissingPotionCountInInventory(data.RejuvenationPotion)
-	needed := beltMissing + invMissing
+	// Calculate total rejuv capacity needed:
+	// - Belt: columns configured for rejuvs * belt rows
+	// - Inventory: RejuvPotionCount config setting
+	beltCapacity := ctx.CharacterCfg.Inventory.BeltColumns.Total(data.RejuvenationPotion) * ctx.Data.Inventory.Belt.Rows()
+	invTarget := ctx.CharacterCfg.Inventory.RejuvPotionCount
+	maxNeeded := beltCapacity + invTarget
 
-	if needed <= 0 {
-		currentCount := countCurrentRejuvs(ctx)
-		targetCount := ctx.CharacterCfg.Inventory.RejuvPotionCount
+	// Count current total rejuvs (belt + inventory)
+	currentTotal := countCurrentRejuvs(ctx)
+
+	// Don't craft if we already have enough or more than max needed
+	if currentTotal >= maxNeeded {
 		ctx.Logger.Debug("Already have enough rejuv potions",
-			slog.Int("current", currentCount),
-			slog.Int("target", targetCount),
-			slog.Int("beltMissing", beltMissing),
-			slog.Int("invMissing", invMissing))
+			slog.Int("currentTotal", currentTotal),
+			slog.Int("maxNeeded", maxNeeded),
+			slog.Int("beltCapacity", beltCapacity),
+			slog.Int("invTarget", invTarget))
 		return nil
 	}
+
+	// Calculate how many we actually need
+	needed := maxNeeded - currentTotal
 
 	// Check if inventory has space for potions (rejuv potions are 1x1)
 	if !hasInventorySpaceForItem(ctx, 1, 1) {
@@ -108,7 +113,34 @@ func CraftRejuvenationPotions() error {
 		return nil
 	}
 
-	ctx.Logger.Info("Crafting rejuvenation potions", slog.Int("needed", needed), slog.Int("beltMissing", beltMissing), slog.Int("invMissing", invMissing))
+	// Priority 0: Pull rejuvs from stash before crafting new ones
+	stashCount := countRejuvsInStash(ctx)
+	if stashCount > 0 {
+		pullCount := min(stashCount, needed)
+		ctx.Logger.Info("Pulling rejuv potions from stash",
+			slog.Int("available", stashCount),
+			slog.Int("needed", needed),
+			slog.Int("pulling", pullCount))
+
+		pulled := pullRejuvsFromStash(ctx, pullCount)
+		if pulled > 0 {
+			ctx.RefreshGameData()
+			currentTotal = countCurrentRejuvs(ctx)
+			needed = maxNeeded - currentTotal
+
+			if needed <= 0 {
+				ctx.Logger.Info("Got enough rejuvs from stash, no crafting needed",
+					slog.Int("pulled", pulled),
+					slog.Int("currentTotal", currentTotal))
+				return nil
+			}
+		}
+	}
+
+	ctx.Logger.Info("Crafting rejuvenation potions",
+		slog.Int("needed", needed),
+		slog.Int("currentTotal", currentTotal),
+		slog.Int("maxNeeded", maxNeeded))
 
 	crafted := 0
 
@@ -122,6 +154,11 @@ func CraftRejuvenationPotions() error {
 			// Check gold before each craft
 			if ctx.Data.PlayerUnit.TotalPlayerGold() < goldPerCraft {
 				ctx.Logger.Debug("Not enough gold to buy potions for crafting")
+				break
+			}
+			// Re-check inventory space before each craft
+			if !hasInventorySpaceForItem(ctx, 1, 1) {
+				ctx.Logger.Debug("Inventory full during crafting loop")
 				break
 			}
 			if err := craftSingleRejuv(ctx, gem, true); err != nil {
@@ -144,6 +181,11 @@ func CraftRejuvenationPotions() error {
 			// Check gold before each craft
 			if ctx.Data.PlayerUnit.TotalPlayerGold() < goldPerCraft {
 				ctx.Logger.Debug("Not enough gold to buy potions for crafting")
+				break
+			}
+			// Re-check inventory space before each craft
+			if !hasInventorySpaceForItem(ctx, 1, 1) {
+				ctx.Logger.Debug("Inventory full during crafting loop")
 				break
 			}
 			if err := craftSingleRejuv(ctx, gem, false); err != nil {
@@ -177,6 +219,93 @@ func countCurrentRejuvs(ctx *context.Status) int {
 		}
 	}
 	return count
+}
+
+// countRejuvsInStash counts rejuv potions in both regular and shared stash
+func countRejuvsInStash(ctx *context.Status) int {
+	count := 0
+	for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationStash, item.LocationSharedStash) {
+		if itm.IsRejuvPotion() {
+			count++
+		}
+	}
+	return count
+}
+
+// getRejuvsFromStash returns rejuv potions from stash
+func getRejuvsFromStash(ctx *context.Status) []data.Item {
+	var rejuvs []data.Item
+	for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationStash, item.LocationSharedStash) {
+		if itm.IsRejuvPotion() {
+			rejuvs = append(rejuvs, itm)
+		}
+	}
+	return rejuvs
+}
+
+// pullRejuvsFromStash moves rejuv potions from stash to inventory
+// Returns the number of potions successfully moved
+func pullRejuvsFromStash(ctx *context.Status, count int) int {
+	if count <= 0 {
+		return 0
+	}
+
+	stashRejuvs := getRejuvsFromStash(ctx)
+	if len(stashRejuvs) == 0 {
+		return 0
+	}
+
+	// Open stash if not already open
+	if !ctx.Data.OpenMenus.Stash {
+		if err := OpenStash(); err != nil {
+			ctx.Logger.Warn("Failed to open stash for pulling rejuvs", slog.String("error", err.Error()))
+			return 0
+		}
+		utils.Sleep(300)
+	}
+
+	pulled := 0
+	for _, rejuv := range stashRejuvs {
+		if pulled >= count {
+			break
+		}
+
+		// Refresh and check if inventory has space
+		ctx.RefreshGameData()
+		if !hasInventorySpaceForItem(ctx, 1, 1) {
+			ctx.Logger.Debug("Inventory full, stopping rejuv pull from stash")
+			break
+		}
+
+		// Switch to correct stash tab
+		SwitchStashTab(rejuv.Location.Page + 1)
+		utils.Sleep(200)
+
+		// Move item to inventory with Ctrl+Click
+		screenPos := ui.GetScreenCoordsForItem(rejuv)
+		ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
+		utils.Sleep(300)
+
+		ctx.RefreshGameData()
+
+		// Verify item moved (no longer in stash)
+		stillInStash := false
+		for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationStash, item.LocationSharedStash) {
+			if itm.UnitID == rejuv.UnitID {
+				stillInStash = true
+				break
+			}
+		}
+
+		if !stillInStash {
+			pulled++
+			ctx.Logger.Debug("Pulled rejuv from stash", slog.String("potion", string(rejuv.Name)), slog.Int("pulled", pulled))
+		} else {
+			ctx.Logger.Warn("Failed to pull rejuv from stash", slog.String("potion", string(rejuv.Name)))
+		}
+	}
+
+	return pulled
 }
 
 // hasInventorySpaceForItem checks if there's room for an item of given size

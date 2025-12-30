@@ -712,3 +712,69 @@ func TakeItemsFromStash(stashedItems []data.Item) error {
 
 	return nil
 }
+
+// StashExcessRejuvs stashes rejuv potions exceeding the configured RejuvPotionCount
+// Returns the number of potions successfully stashed
+func StashExcessRejuvs() int {
+	ctx := context.Get()
+	ctx.SetLastAction("StashExcessRejuvs")
+
+	targetCount := ctx.CharacterCfg.Inventory.RejuvPotionCount
+
+	// Count rejuvs in inventory (not belt)
+	var invRejuvs []data.Item
+	for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+		if itm.IsRejuvPotion() {
+			invRejuvs = append(invRejuvs, itm)
+		}
+	}
+
+	excess := len(invRejuvs) - targetCount
+	if excess <= 0 {
+		return 0
+	}
+
+	ctx.Logger.Info("Stashing excess rejuv potions",
+		slog.Int("current", len(invRejuvs)),
+		slog.Int("target", targetCount),
+		slog.Int("excess", excess))
+
+	// Open stash if not already open
+	if !ctx.Data.OpenMenus.Stash {
+		if err := OpenStash(); err != nil {
+			ctx.Logger.Warn("Failed to open stash for storing excess rejuvs", slog.String("error", err.Error()))
+			return 0
+		}
+		utils.Sleep(300)
+	}
+
+	stashed := 0
+	for i := 0; i < excess && i < len(invRejuvs); i++ {
+		rejuv := invRejuvs[i]
+
+		// Use Ctrl+Click to stash the potion
+		screenPos := ui.GetScreenCoordsForItem(rejuv)
+		ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
+		utils.Sleep(300)
+
+		ctx.RefreshGameData()
+
+		// Verify item moved (no longer in inventory)
+		stillInInventory := false
+		for _, itm := range ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+			if itm.UnitID == rejuv.UnitID {
+				stillInInventory = true
+				break
+			}
+		}
+
+		if !stillInInventory {
+			stashed++
+			ctx.Logger.Debug("Stashed excess rejuv", slog.String("potion", string(rejuv.Name)), slog.Int("stashed", stashed))
+		} else {
+			ctx.Logger.Warn("Failed to stash rejuv (still in inventory)", slog.String("potion", string(rejuv.Name)))
+		}
+	}
+
+	return stashed
+}
