@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hectorgimenez/d2go/pkg/data"
+	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/skill"
 	"github.com/hectorgimenez/d2go/pkg/data/state"
 	"github.com/hectorgimenez/koolo/internal/context"
@@ -126,12 +127,20 @@ func MoveTo(dest data.Position, options ...MoveOption) error {
 
 	blockThreshold := 200 * time.Millisecond
 	stuckThreshold := 2 * time.Second
-	stuckCheckStartTime := time.Now()
+	roundTripThreshold := 10 * time.Second
+	roundTripMaxRadius := 8.0
 
+	// Special case for Moo Moo Farm: the collision data doesn't include fences/boulders,
+	// so the bot often gets stuck. Increase thresholds to allow more recovery attempts.
+	if ctx.Data.PlayerUnit.Area == area.MooMooFarm {
+		stuckThreshold = 4 * time.Second
+		roundTripThreshold = 20 * time.Second
+		roundTripMaxRadius = 15.0
+	}
+
+	stuckCheckStartTime := time.Now()
 	roundTripReferencePosition := ctx.Data.PlayerUnit.Position
 	roundTripCheckStartTime := time.Now()
-	const roundTripThreshold = 10 * time.Second
-	const roundTripMaxRadius = 8
 
 	// Adaptive movement refresh intervals based on ping
 	// Adjust polling frequency based on network latency
