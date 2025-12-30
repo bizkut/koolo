@@ -731,6 +731,9 @@ func StashExcessRejuvs() int {
 
 	excess := len(invRejuvs) - targetCount
 	if excess <= 0 {
+		ctx.Logger.Debug("No excess rejuv potions to stash",
+			slog.Int("inventoryCount", len(invRejuvs)),
+			slog.Int("targetCount", targetCount))
 		return 0
 	}
 
