@@ -66,6 +66,10 @@ func Stash(forceStash bool) error {
 	dropExcessItems()
 	step.CloseAllMenus()
 
+	// Check for any items that may have dropped during stash operations
+	ctx.RefreshGameData()
+	ItemPickup(10) // Pick up items within 10 units of the stash
+
 	return nil
 }
 
