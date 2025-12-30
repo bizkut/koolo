@@ -183,6 +183,16 @@ func countCurrentRejuvs(ctx *context.Status) int {
 func hasInventorySpaceForItem(ctx *context.Status, width, height int) bool {
 	invMatrix := ctx.Data.Inventory.Matrix()
 
+	// Safety check for empty inventory matrix
+	if len(invMatrix) == 0 || len(invMatrix[0]) == 0 {
+		return false
+	}
+
+	// Check if dimensions are valid
+	if height > len(invMatrix) || width > len(invMatrix[0]) {
+		return false
+	}
+
 	for y := 0; y <= len(invMatrix)-height; y++ {
 		for x := 0; x <= len(invMatrix[0])-width; x++ {
 			freeSpace := true
