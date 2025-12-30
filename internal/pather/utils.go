@@ -481,7 +481,7 @@ func (pf *PathFinder) GetClosestDestructible(position data.Position) (*data.Obje
 		object.LargeUrn5, object.Crate, object.HollowLog, object.Sarcophagus,
 	}
 
-	const immediateVicinity = 2.0
+	const immediateVicinity = 5.0
 	var closestObject *data.Object
 	minDistance := immediateVicinity
 
