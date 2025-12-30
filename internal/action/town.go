@@ -134,11 +134,11 @@ func PreRun(firstRun bool) error {
 		}
 	}
 
-	// Refill pots, sell, buy etc (after rejuv crafting)
-	VendorRefill(false, true)
-
-	// Stash excess rejuv potions (more than RejuvPotionCount)
+	// Stash excess rejuv potions BEFORE vendor (so they don't get sold)
 	StashExcessRejuvs()
+
+	// Refill pots, sell, buy etc (after rejuv crafting and stashing)
+	VendorRefill(false, true)
 
 	// Gamble
 	Gamble()
@@ -248,11 +248,11 @@ func InRunReturnTownRoutine() error {
 		}
 	}
 
+	// Stash excess rejuv potions BEFORE vendor (so they don't get sold)
+	StashExcessRejuvs()
+
 	VendorRefill(false, true)
 	ctx.PauseIfNotPriority() // Check after VendorRefill
-
-	// Stash excess rejuv potions (more than RejuvPotionCount)
-	StashExcessRejuvs()
 
 	Stash(false)
 	ctx.PauseIfNotPriority() // Check after Stash
