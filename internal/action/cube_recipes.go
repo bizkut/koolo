@@ -51,6 +51,96 @@ var (
 			Items: []string{"FlawlessSkull", "FlawlessSkull", "FlawlessSkull"},
 		},
 
+		// Flawless
+		{
+			Name:  "Flawless Amethyst",
+			Items: []string{"Amethyst", "Amethyst", "Amethyst"},
+		},
+		{
+			Name:  "Flawless Diamond",
+			Items: []string{"Diamond", "Diamond", "Diamond"},
+		},
+		{
+			Name:  "Flawless Emerald",
+			Items: []string{"Emerald", "Emerald", "Emerald"},
+		},
+		{
+			Name:  "Flawless Ruby",
+			Items: []string{"Ruby", "Ruby", "Ruby"},
+		},
+		{
+			Name:  "Flawless Sapphire",
+			Items: []string{"Sapphire", "Sapphire", "Sapphire"},
+		},
+		{
+			Name:  "Flawless Topaz",
+			Items: []string{"Topaz", "Topaz", "Topaz"},
+		},
+		{
+			Name:  "Flawless Skull",
+			Items: []string{"Skull", "Skull", "Skull"},
+		},
+
+		// Normal
+		{
+			Name:  "Amethyst",
+			Items: []string{"FlawedAmethyst", "FlawedAmethyst", "FlawedAmethyst"},
+		},
+		{
+			Name:  "Diamond",
+			Items: []string{"FlawedDiamond", "FlawedDiamond", "FlawedDiamond"},
+		},
+		{
+			Name:  "Emerald",
+			Items: []string{"FlawedEmerald", "FlawedEmerald", "FlawedEmerald"},
+		},
+		{
+			Name:  "Ruby",
+			Items: []string{"FlawedRuby", "FlawedRuby", "FlawedRuby"},
+		},
+		{
+			Name:  "Sapphire",
+			Items: []string{"FlawedSapphire", "FlawedSapphire", "FlawedSapphire"},
+		},
+		{
+			Name:  "Topaz",
+			Items: []string{"FlawedTopaz", "FlawedTopaz", "FlawedTopaz"},
+		},
+		{
+			Name:  "Skull",
+			Items: []string{"FlawedSkull", "FlawedSkull", "FlawedSkull"},
+		},
+
+		// Flawed
+		{
+			Name:  "Flawed Amethyst",
+			Items: []string{"ChippedAmethyst", "ChippedAmethyst", "ChippedAmethyst"},
+		},
+		{
+			Name:  "Flawed Diamond",
+			Items: []string{"ChippedDiamond", "ChippedDiamond", "ChippedDiamond"},
+		},
+		{
+			Name:  "Flawed Emerald",
+			Items: []string{"ChippedEmerald", "ChippedEmerald", "ChippedEmerald"},
+		},
+		{
+			Name:  "Flawed Ruby",
+			Items: []string{"ChippedRuby", "ChippedRuby", "ChippedRuby"},
+		},
+		{
+			Name:  "Flawed Sapphire",
+			Items: []string{"ChippedSapphire", "ChippedSapphire", "ChippedSapphire"},
+		},
+		{
+			Name:  "Flawed Topaz",
+			Items: []string{"ChippedTopaz", "ChippedTopaz", "ChippedTopaz"},
+		},
+		{
+			Name:  "Flawed Skull",
+			Items: []string{"ChippedSkull", "ChippedSkull", "ChippedSkull"},
+		},
+
 		// Token
 		{
 			Name:  "Token of Absolution",
@@ -424,9 +514,21 @@ func CubeRecipes() error {
 	for _, recipe := range Recipes {
 		// Check if the current recipe is Enabled
 		if !slices.Contains(ctx.CharacterCfg.CubeRecipes.EnabledRecipes, recipe.Name) {
-			// is this really needed ? making huge logs
-			//		ctx.Logger.Debug("Cube recipe is not enabled, skipping", "recipe", recipe.Name)
-			continue
+			// Check if it's a lower quality gem recipe and enabled by the global flag
+			isLowQualityGemRecipe := false
+			if ctx.CharacterCfg.CubeRecipes.EnableLowQualityGemCrafting {
+				lowQualityPrefixes := []string{"Flawless ", "Amethyst", "Diamond", "Emerald", "Ruby", "Sapphire", "Topaz", "Skull", "Flawed "}
+				for _, prefix := range lowQualityPrefixes {
+					if strings.HasPrefix(recipe.Name, prefix) {
+						isLowQualityGemRecipe = true
+						break
+					}
+				}
+			}
+
+			if !isLowQualityGemRecipe {
+				continue
+			}
 		}
 
 		ctx.Logger.Debug("Cube recipe is enabled, processing", "recipe", recipe.Name)

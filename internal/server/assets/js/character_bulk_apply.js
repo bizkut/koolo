@@ -227,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const enabled = !!document.querySelector('input[name="enableCubeRecipes"]')?.checked;
         const skipPerfectAmethysts = !!document.querySelector('input[name="skipPerfectAmethysts"]')?.checked;
         const skipPerfectRubies = !!document.querySelector('input[name="skipPerfectRubies"]')?.checked;
+        const enableLowQualityGemCrafting = !!document.querySelector('input[name="enableLowQualityGemCrafting"]')?.checked;
         const jewelsToKeepInput = document.querySelector('input[name="jewelsToKeep"]');
         const jewelsToKeep = jewelsToKeepInput ? jewelsToKeepInput.value || '' : '';
         const enabledRecipeInputs = document.querySelectorAll('input[name="enabledRecipes"]:checked');
@@ -238,6 +239,7 @@ document.addEventListener('DOMContentLoaded', function () {
             enabled,
             skipPerfectAmethysts,
             skipPerfectRubies,
+            enableLowQualityGemCrafting,
             jewelsToKeep,
             enabledRecipes,
         };
@@ -792,6 +794,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'enableCubeRecipes',
         'skipPerfectAmethysts',
         'skipPerfectRubies',
+        'enableLowQualityGemCrafting',
         'jewelsToKeep',
         'enabledRecipes',
     ]);

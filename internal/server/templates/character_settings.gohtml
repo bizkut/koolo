@@ -1085,6 +1085,10 @@
                 <input type="checkbox" name="enableRejuvCrafting" {{ if .Config.CubeRecipes.EnableRejuvCrafting }}checked{{ end }}/>
                 Craft Rejuv Potions (uses chipped gems)
             </label><br>
+            <label>
+                <input type="checkbox" name="enableLowQualityGemCrafting" {{ if .Config.CubeRecipes.EnableLowQualityGemCrafting }}checked{{ end }}/>
+                Craft Low Quality Gems (Chipped -> Flawed -> Normal -> Flawless)
+            </label><br>
             <div class="recipe-grid">
                 {{ range $index, $recipe := .RecipeList }}
                 <label>
