@@ -280,6 +280,7 @@ func (a Leveling) act2() error {
 	if !a.ctx.Data.Quests[quest.Act2TheSummoner].Completed() && a.ctx.Data.Quests[quest.Act2TheSevenTombs].NotStarted() {
 		a.ctx.Logger.Info("Starting summoner quest (Summoner not yet completed).")
 		action.InteractNPC(npc.Drognan)
+		action.InteractNPC(npc.Jerhyn)
 		err := NewSummoner().Run(nil)
 		if err != nil {
 			return err
@@ -515,6 +516,7 @@ func (a Leveling) findAmulet() error {
 
 	// This stops us being blocked from getting into Palace
 	action.InteractNPC(npc.Drognan)
+	action.InteractNPC(npc.Jerhyn)
 
 	return nil
 }
