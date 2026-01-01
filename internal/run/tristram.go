@@ -7,6 +7,7 @@ import (
 	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/difficulty"
+	"github.com/hectorgimenez/d2go/pkg/data/item"
 	"github.com/hectorgimenez/d2go/pkg/data/object"
 	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/koolo/internal/action"
@@ -61,6 +62,53 @@ func (t Tristram) Run(parameters *RunParameters) error {
 	err := action.WayPoint(area.StonyField)
 	if err != nil {
 		return err
+	}
+
+	// Check for Scroll of Inifuss (ID 524) or Deciphered Scroll (ID 525)
+	hasScroll := false
+	for _, itm := range t.ctx.Data.Inventory.ByLocation(item.LocationInventory) {
+		if itm.ID == 524 || itm.ID == 525 {
+			hasScroll = true
+			break
+		}
+	}
+
+	if !hasScroll {
+		// Check stash
+		var scrollItem data.Item
+		foundInStash := false
+		for _, itm := range t.ctx.Data.Inventory.ByLocation(item.LocationStash, item.LocationSharedStash) {
+			if itm.ID == 524 || itm.ID == 525 {
+				scrollItem = itm
+				foundInStash = true
+				break
+			}
+		}
+
+		if foundInStash {
+			t.ctx.Logger.Info("Scroll found in stash. Retrieving...")
+			if err := action.ReturnTown(); err != nil {
+				return err
+			}
+			if err := action.TakeItemsFromStash([]data.Item{scrollItem}); err != nil {
+				return err
+			}
+			if err := action.WayPoint(area.StonyField); err != nil {
+				return err
+			}
+			hasScroll = true
+		}
+	}
+
+	if !hasScroll {
+		t.ctx.Logger.Info("Scroll of Inifuss not found. Retrieving it...")
+		if err := NewQuests().rescueCainQuest(); err != nil {
+			return err
+		}
+		// Refetch waypoint after quest completion returns to town
+		if err := action.WayPoint(area.StonyField); err != nil {
+			return err
+		}
 	}
 
 	// Find the Cairn Stone Alpha
