@@ -123,6 +123,7 @@ func PreRun(firstRun bool) error {
 		if !isLevelingChar {
 			RerollRunewords()
 		}
+		ItemSocketing() // Add ItemSocketing here
 		CubeRecipes()
 		CraftRejuvenationPotions()
 	} else {
@@ -132,6 +133,7 @@ func PreRun(firstRun bool) error {
 		if !isLevelingChar {
 			RerollRunewords()
 		}
+		ItemSocketing() // Add ItemSocketing here
 	}
 
 	// Stash excess rejuv potions BEFORE vendor (so they don't get sold)
@@ -223,6 +225,7 @@ func InRunReturnTownRoutine() error {
 	ctx.PauseIfNotPriority() // Check after ManageCharms
 
 	// Craft rejuv potions BEFORE vendor refill so gems/potions are converted first
+	// Craft rejuv potions BEFORE vendor refill so gems/potions are converted first
 	if ctx.CharacterCfg.CubeRecipes.PrioritizeRunewords {
 		MakeRunewords()
 		// Do not reroll runewords while running the leveling sequences.
@@ -231,6 +234,7 @@ func InRunReturnTownRoutine() error {
 		if !isLevelingChar {
 			RerollRunewords()
 		}
+		ItemSocketing() // Add ItemSocketing here
 		CubeRecipes()
 		CraftRejuvenationPotions()
 		ctx.PauseIfNotPriority() // Check after CubeRecipes/CraftRejuv
@@ -246,6 +250,7 @@ func InRunReturnTownRoutine() error {
 		if !isLevelingChar {
 			RerollRunewords()
 		}
+		ItemSocketing() // Add ItemSocketing here
 	}
 
 	// Stash excess rejuv potions BEFORE vendor (so they don't get sold)

@@ -444,6 +444,13 @@ type CharacterCfg struct {
 		EnableRejuvCrafting         bool     `yaml:"enableRejuvCrafting"`         // Craft Rejuv Potions (chipped gem)
 		EnableLowQualityGemCrafting bool     `yaml:"enableLowQualityGemCrafting"` // Enable crafting Chipped -> Flawed -> Normal -> Flawless
 	} `yaml:"cubing"`
+	ItemSocketing struct {
+		Enabled bool `yaml:"enabled"`
+		Recipes []struct {
+			ItemName       string `yaml:"itemName"`
+			SocketWithName string `yaml:"socketWithName"`
+		} `yaml:"recipes"`
+	} `yaml:"itemSocketing"`
 	BackToTown struct {
 		NoHpPotions     bool `yaml:"noHpPotions"`
 		NoMpPotions     bool `yaml:"noMpPotions"`

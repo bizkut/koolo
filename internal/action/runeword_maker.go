@@ -108,24 +108,51 @@ func MakeRunewords() error {
 }
 
 func SocketItems(ctx *context.Status, recipe Runeword, base data.Item, items ...data.Item) error {
-
 	ctx.SetLastAction("SocketItem")
 
 	ins := ctx.Data.Inventory.ByLocation(item.LocationStash, item.LocationSharedStash, item.LocationInventory)
 
-	for _, itm := range items {
-		if itm.Location.LocationType == item.LocationStash || itm.Location.LocationType == item.LocationSharedStash {
-			OpenStash()
-			break
+	usedItems := make(map[*data.Item]bool)
+	orderedItems := make([]data.Item, 0)
+
+	// Process each required insert in order
+	for _, requiredInsert := range recipe.Runes {
+		for i := range ins {
+			item := &ins[i]
+			if string(item.Name) == requiredInsert && !usedItems[item] {
+				orderedItems = append(orderedItems, *item)
+				usedItems[item] = true
+				break
+			}
 		}
 	}
-	if !ctx.Data.OpenMenus.Stash && (base.Location.LocationType == item.LocationStash || base.Location.LocationType == item.LocationSharedStash) {
-		err := OpenStash()
-		if err != nil {
+
+	return InsertIntoSockets(orderedItems, base)
+}
+
+func InsertIntoSockets(itemsToSocket []data.Item, base data.Item) error {
+	ctx := context.Get()
+
+	// Ensure stash is open if base or any item is in stash
+	needsStashOpen := false
+	if base.Location.LocationType == item.LocationStash || base.Location.LocationType == item.LocationSharedStash {
+		needsStashOpen = true
+	} else {
+		for _, itm := range itemsToSocket {
+			if itm.Location.LocationType == item.LocationStash || itm.Location.LocationType == item.LocationSharedStash {
+				needsStashOpen = true
+				break
+			}
+		}
+	}
+
+	if needsStashOpen && !ctx.Data.OpenMenus.Stash {
+		if err := OpenStash(); err != nil {
 			return err
 		}
 	}
 
+	// Move base to inventory if it's in stash
 	if base.Location.LocationType == item.LocationSharedStash || base.Location.LocationType == item.LocationStash {
 		ctx.Logger.Debug("Base in stash - checking it fits")
 		if !itemFitsInventory(base) {
@@ -134,17 +161,18 @@ func SocketItems(ctx *context.Status, recipe Runeword, base data.Item, items ...
 			return fmt.Errorf("base item %s does not fit in inventory", base.Name)
 		}
 
+		targetTab := 1
 		if base.Location.LocationType == item.LocationSharedStash {
-			ctx.Logger.Debug("Base in shared stash but fits in inv, switching to correct tab")
-			SwitchStashTab(base.Location.Page + 1)
-		} else {
-			ctx.Logger.Debug("Base in personal stash but fits in inv, switching to correct tab")
-			SwitchStashTab(1)
+			targetTab = base.Location.Page + 1
 		}
-		ctx.Logger.Debug("Switched to correct tab")
+
+		// Switch to the correct tab to pick up the item
+		SwitchStashTab(targetTab)
 		utils.Sleep(500)
+
 		screenPos := ui.GetScreenCoordsForItem(base)
 		ctx.Logger.Debug(fmt.Sprintf("Moving base item from stash at screen coords %d:%d", screenPos.X, screenPos.Y))
+
 		moveSucceeded := false
 		for attempt := 0; attempt < 2; attempt++ {
 			ctx.HID.ClickWithModifier(game.LeftButton, screenPos.X, screenPos.Y, game.CtrlKey)
@@ -164,42 +192,11 @@ func SocketItems(ctx *context.Status, recipe Runeword, base data.Item, items ...
 		}
 	}
 
-	usedItems := make(map[*data.Item]bool)
-	orderedItems := make([]data.Item, 0)
-
-	// Process each required insert in order
-	for _, requiredInsert := range recipe.Runes {
-		for i := range ins {
-			item := &ins[i]
-			if string(item.Name) == requiredInsert && !usedItems[item] {
-				orderedItems = append(orderedItems, *item)
-				usedItems[item] = true
-				break
-			}
-		}
-	}
-	// Diagnostic log: report how many inserts we will attempt to socket
-	if len(orderedItems) == 0 {
-		ctx.Logger.Debug("SocketItems: no ordered inserts found for recipe",
-			"runeword", recipe.Name,
-		)
-	} else {
-		names := make([]string, 0, len(orderedItems))
-		for _, it := range orderedItems {
-			names = append(names, string(it.Name))
-		}
-		ctx.Logger.Debug("SocketItems: preparing inserts",
-			"runeword", recipe.Name,
-			"count", len(orderedItems),
-			"items", fmt.Sprintf("%v", names),
-		)
-	}
-
-	previousPage := -1 // Initialize to invalid page number
-	for _, itm := range orderedItems {
+	previousPage := -1
+	for _, itm := range itemsToSocket {
 		if itm.Location.LocationType == item.LocationSharedStash || itm.Location.LocationType == item.LocationStash {
 			currentPage := itm.Location.Page + 1
-			if previousPage != currentPage || currentPage != base.Location.Page {
+			if previousPage != currentPage {
 				SwitchStashTab(currentPage)
 			}
 			previousPage = currentPage
@@ -209,23 +206,16 @@ func SocketItems(ctx *context.Status, recipe Runeword, base data.Item, items ...
 		ctx.HID.Click(game.LeftButton, screenPos.X, screenPos.Y)
 		utils.Sleep(300)
 
-		for _, movedBase := range ctx.Data.Inventory.AllItems {
-			if base.UnitID == movedBase.UnitID {
-				if (base.Location.LocationType == item.LocationStash) && base.Location.Page != itm.Location.Page {
-					SwitchStashTab(base.Location.Page + 1)
-				}
-
-				basescreenPos := ui.GetScreenCoordsForItem(movedBase)
-				ctx.HID.Click(game.LeftButton, basescreenPos.X, basescreenPos.Y)
-				utils.Sleep(300)
-				if itm.Location.LocationType == item.LocationCursor {
-					DropMouseItem()
-					return fmt.Errorf("failed to insert item %s into base %s", itm.Name, base.Name)
-				}
-			}
-		}
+		// Click on base
+		// Refresh base location in case it changed (it shouldn't if in inventory, but good practice)
+		baseLoc := ui.GetScreenCoordsForItem(base)
+		ctx.HID.Click(game.LeftButton, baseLoc.X, baseLoc.Y)
 		utils.Sleep(300)
+
+		// Use updated base for next iteration if needed, though usually base stays put
 	}
+
+	// Close menus at end
 	return step.CloseAllMenus()
 }
 
