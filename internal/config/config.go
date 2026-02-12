@@ -17,7 +17,6 @@ import (
 
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/difficulty"
-	"github.com/hectorgimenez/d2go/pkg/data/item"
 	"github.com/hectorgimenez/d2go/pkg/data/stat"
 	cp "github.com/otiai10/copy"
 
@@ -31,13 +30,18 @@ var (
 	Koolo      *KooloCfg
 	Characters map[string]*CharacterCfg
 	Version    = "dev"
+
+	// NIP rules cache - stores compiled rules by path to avoid recompiling for multiple characters
+	nipRulesCacheMux sync.RWMutex
+	nipRulesCache    = make(map[string]nip.Rules)
 )
 
 type KooloCfg struct {
 	Debug struct {
-		Log         bool `yaml:"log"`
-		Screenshots bool `yaml:"screenshots"`
-		RenderMap   bool `yaml:"renderMap"`
+		Log                       bool `yaml:"log"`
+		Screenshots               bool `yaml:"screenshots"`
+		RenderMap                 bool `yaml:"renderMap"`
+		OpenOverlayMapOnGameStart bool `yaml:"openOverlayMapOnGameStart"`
 	} `yaml:"debug"`
 	FirstRun              bool   `yaml:"firstRun"`
 	UseCustomSettings     bool   `yaml:"useCustomSettings"`
@@ -55,17 +59,30 @@ type KooloCfg struct {
 		EnableRunFinishMessages      bool     `yaml:"enableRunFinishMessages"`
 		EnableDiscordChickenMessages bool     `yaml:"enableDiscordChickenMessages"`
 		EnableDiscordErrorMessages   bool     `yaml:"enableDiscordErrorMessages"`
+		DisableItemStashScreenshots  bool     `yaml:"disableItemStashScreenshots"`
+		IncludePickitInfoInItemText  bool     `yaml:"includePickitInfoInItemText"`
 		BotAdmins                    []string `yaml:"botAdmins"`
 		ChannelID                    string   `yaml:"channelId"`
+		ItemChannelID                string   `yaml:"itemChannelId"`
 		Token                        string   `yaml:"token"`
 		UseWebhook                   bool     `yaml:"useWebhook"`
 		WebhookURL                   string   `yaml:"webhookUrl"`
+		ItemWebhookURL               string   `yaml:"itemWebhookUrl"`
 	} `yaml:"discord"`
 	Telegram struct {
 		Enabled bool   `yaml:"enabled"`
 		ChatID  int64  `yaml:"chatId"`
 		Token   string `yaml:"token"`
 	}
+	Ngrok struct {
+		Enabled       bool   `yaml:"enabled"`
+		SendURL       bool   `yaml:"sendUrl"`
+		Authtoken     string `yaml:"authtoken"`
+		Region        string `yaml:"region"`
+		Domain        string `yaml:"domain"`
+		BasicAuthUser string `yaml:"basicAuthUser"`
+		BasicAuthPass string `yaml:"basicAuthPass"`
+	} `yaml:"ngrok"`
 	PingMonitor struct {
 		Enabled           bool `yaml:"enabled"`
 		HighPingThreshold int  `yaml:"highPingThreshold"` // Ping threshold in ms (default 500-1000)
@@ -76,6 +93,7 @@ type KooloCfg struct {
 		DelaySeconds int  `yaml:"delaySeconds"`
 	} `yaml:"autoStart"`
 	RunewordFavoriteRecipes []string `yaml:"runewordFavoriteRecipes"`
+	RunFavoriteRuns         []string `yaml:"runFavoriteRuns"`
 }
 
 type Day struct {
@@ -85,11 +103,11 @@ type Day struct {
 
 // RunewordOverrideConfig stores a character's overrides keyed by the display name (e.g. "Enigma").
 type RunewordOverrideConfig struct {
-	EthMode       string                       `yaml:"ethMode,omitempty"`       // "any", "eth", "noneth"
-	QualityMode   string                       `yaml:"qualityMode,omitempty"`   // "any", "normal", "superior"
-	BaseType      string                       `yaml:"baseType,omitempty"`      // armor, bow, polearm, etc.
-	BaseTier      string                       `yaml:"baseTier,omitempty"`      // "", "normal", "exceptional", "elite"
-	BaseName      string                       `yaml:"baseName,omitempty"`      // optional specific base name
+	EthMode     string `yaml:"ethMode,omitempty"`     // "any", "eth", "noneth"
+	QualityMode string `yaml:"qualityMode,omitempty"` // "any", "normal", "superior"
+	BaseType    string `yaml:"baseType,omitempty"`    // armor, bow, polearm, etc.
+	BaseTier    string `yaml:"baseTier,omitempty"`    // "", "normal", "exceptional", "elite"
+	BaseName    string `yaml:"baseName,omitempty"`    // optional specific base name
 }
 
 // RunewordTargetStatOverride captures the desired min/max for a stat (and optional layer) when rerolling.
@@ -112,13 +130,76 @@ type RunewordRerollRule struct {
 }
 
 type Scheduler struct {
-	Enabled bool  `yaml:"enabled"`
-	Days    []Day `yaml:"days"`
+	Enabled bool   `yaml:"enabled"`
+	Mode    string `yaml:"mode"` // "timeSlots" (default) or "duration"
+
+	// Time Slots Mode (existing)
+	Days              []Day `yaml:"days"`
+	GlobalVarianceMin int   `yaml:"globalVarianceMin,omitempty"` // Default variance for all ranges (+/- minutes)
+
+	// Duration Mode
+	Duration DurationSchedule `yaml:"duration,omitempty"`
+}
+
+// DurationSchedule configures human-like play patterns with randomized breaks
+type DurationSchedule struct {
+	// Wake Up
+	WakeUpTime     string `yaml:"wakeUpTime"`     // Base wake time "HH:MM" (e.g., "08:00")
+	WakeUpVariance int    `yaml:"wakeUpVariance"` // +/- minutes (e.g., 30)
+
+	// Play Duration
+	PlayHours         int `yaml:"playHours"`         // Base play time per day (e.g., 14)
+	PlayHoursVariance int `yaml:"playHoursVariance"` // +/- hours (e.g., 2 means 12-16h)
+
+	// Meal Breaks (longer)
+	MealBreakCount    int `yaml:"mealBreakCount"`    // Number of meal breaks (e.g., 2 for lunch+dinner)
+	MealBreakDuration int `yaml:"mealBreakDuration"` // Base duration in minutes (e.g., 30)
+	MealBreakVariance int `yaml:"mealBreakVariance"` // +/- minutes for duration (e.g., 15)
+
+	// Short Breaks (snack/water/bathroom)
+	ShortBreakCount    int `yaml:"shortBreakCount"`    // Number of short breaks (e.g., 3-4)
+	ShortBreakDuration int `yaml:"shortBreakDuration"` // Base duration in minutes (e.g., 8)
+	ShortBreakVariance int `yaml:"shortBreakVariance"` // +/- minutes for duration (e.g., 5)
+
+	// Timing Variance (when breaks occur)
+	BreakTimingVariance int `yaml:"breakTimingVariance"` // +/- minutes for break start times (e.g., 30)
+
+	// Jitter Range - makes variance itself variable, randomized per roll
+	JitterMin int `yaml:"jitterMin"` // Min jitter multiplier % (e.g., 30)
+	JitterMax int `yaml:"jitterMax"` // Max jitter multiplier % (e.g., 150)
 }
 
 type TimeRange struct {
-	Start time.Time `yaml:"start"`
-	End   time.Time `yaml:"end"`
+	Start            time.Time `yaml:"start"`
+	End              time.Time `yaml:"end"`
+	StartVarianceMin int       `yaml:"startVarianceMin,omitempty"` // +/- minutes for start time
+	EndVarianceMin   int       `yaml:"endVarianceMin,omitempty"`   // +/- minutes for end time
+}
+
+type AutoStatSkillConfig struct {
+	Enabled            bool                 `yaml:"enabled"`
+	Stats              []AutoStatSkillStat  `yaml:"stats,omitempty"`
+	Skills             []AutoStatSkillSkill `yaml:"skills,omitempty"`
+	Respec             AutoRespecConfig     `yaml:"autoRespec,omitempty"`
+	ExcludeQuestStats  bool                 `yaml:"excludeQuestStats,omitempty"`
+	ExcludeQuestSkills bool                 `yaml:"excludeQuestSkills,omitempty"`
+}
+
+type AutoStatSkillStat struct {
+	Stat   string `yaml:"stat"`
+	Target int    `yaml:"target"`
+}
+
+type AutoStatSkillSkill struct {
+	Skill  string `yaml:"skill"`
+	Target int    `yaml:"target"`
+}
+
+type AutoRespecConfig struct {
+	Enabled     bool `yaml:"enabled"`
+	TokenFirst  bool `yaml:"tokenFirst,omitempty"`
+	TargetLevel int  `yaml:"targetLevel,omitempty"`
+	Applied     bool `yaml:"applied,omitempty"`
 }
 
 type CharacterCfg struct {
@@ -133,7 +214,6 @@ type CharacterCfg struct {
 	CommandLineArgs      string `yaml:"commandLineArgs"`
 	KillD2OnStop         bool   `yaml:"killD2OnStop"`
 	ClassicMode          bool   `yaml:"classicMode"`
-	CloseMiniPanel       bool   `yaml:"closeMiniPanel"`
 	UseCentralizedPickit bool   `yaml:"useCentralizedPickit"`
 	HidePortraits        bool   `yaml:"hidePortraits"`
 	AutoStart            bool   `yaml:"autoStart"`
@@ -161,6 +241,21 @@ type CharacterCfg struct {
 		TownChickenAt       int `yaml:"townChickenAt"`
 		MercChickenAt       int `yaml:"mercChickenAt"`
 	} `yaml:"health"`
+	ChickenOnCurses struct {
+		AmplifyDamage bool `yaml:"amplifyDamage"`
+		Decrepify     bool `yaml:"decrepify"`
+		LowerResist   bool `yaml:"lowerResist"`
+		BloodMana     bool `yaml:"bloodMana"`
+	} `yaml:"chickenOnCurses"`
+	ChickenOnAuras struct {
+		Fanaticism bool `yaml:"fanaticism"`
+		Might      bool `yaml:"might"`
+		Conviction bool `yaml:"conviction"`
+		HolyFire   bool `yaml:"holyFire"`
+		BlessedAim bool `yaml:"blessedAim"`
+		HolyFreeze bool `yaml:"holyFreeze"`
+		HolyShock  bool `yaml:"holyShock"`
+	} `yaml:"chickenOnAuras"`
 	Inventory struct {
 		InventoryLock      [][]int     `yaml:"inventoryLock"`
 		BeltColumns        BeltColumns `yaml:"beltColumns"`
@@ -169,16 +264,17 @@ type CharacterCfg struct {
 		RejuvPotionCount   int         `yaml:"rejuvPotionCount"`
 	} `yaml:"inventory"`
 	Character struct {
-		Class                        string `yaml:"class"`
-		UseMerc                      bool   `yaml:"useMerc"`
-		StashToShared                bool   `yaml:"stashToShared"`
-		UseTeleport                  bool   `yaml:"useTeleport"`
-		ClearPathDist                int    `yaml:"clearPathDist"`
-		ShouldHireAct2MercFrozenAura bool   `yaml:"shouldHireAct2MercFrozenAura"`
-		UseExtraBuffs                bool   `yaml:"useExtraBuffs"`
-		UseSwapForBuffs              bool   `yaml:"use_swap_for_buffs"`
-		BuffOnNewArea                bool   `yaml:"buffOnNewArea"`
-		BuffAfterWP                  bool   `yaml:"buffAfterWP"`
+		Class                        string              `yaml:"class"`
+		UseMerc                      bool                `yaml:"useMerc"`
+		StashToShared                bool                `yaml:"stashToShared"`
+		UseTeleport                  bool                `yaml:"useTeleport"`
+		ClearPathDist                int                 `yaml:"clearPathDist"`
+		ShouldHireAct2MercFrozenAura bool                `yaml:"shouldHireAct2MercFrozenAura"`
+		UseExtraBuffs                bool                `yaml:"useExtraBuffs"`
+		UseSwapForBuffs              bool                `yaml:"use_swap_for_buffs"`
+		BuffOnNewArea                bool                `yaml:"buffOnNewArea"`
+		BuffAfterWP                  bool                `yaml:"buffAfterWP"`
+		AutoStatSkill                AutoStatSkillConfig `yaml:"autoStatSkill"`
 		BerserkerBarb                struct {
 			FindItemSwitch              bool `yaml:"find_item_switch"`
 			SkipPotionPickupInTravincal bool `yaml:"skip_potion_pickup_in_travincal"`
@@ -191,6 +287,11 @@ type CharacterCfg struct {
 			HorkNormalMonsters          bool `yaml:"hork_normal_monsters"`
 			HorkMonsterCheckRange       int  `yaml:"hork_monster_check_range"`
 		} `yaml:"berserker_barb"`
+		WhirlwindBarb struct {
+			SkipPotionPickupInTravincal bool `yaml:"skip_potion_pickup_in_travincal"`
+			HorkNormalMonsters          bool `yaml:"hork_normal_monsters"`
+			HorkMonsterCheckRange       int  `yaml:"hork_monster_check_range"`
+		} `yaml:"whirlwind_barb"`
 		BlizzardSorceress struct {
 			UseMoatTrick        bool `yaml:"use_moat_trick"`
 			UseStaticOnMephisto bool `yaml:"use_static_on_mephisto"`
@@ -237,6 +338,13 @@ type CharacterCfg struct {
 		AmazonLeveling struct {
 			UsePacketLearning bool `yaml:"use_packet_learning"`
 		} `yaml:"amazon_leveling"`
+		Javazon struct {
+			DensityKillerEnabled           bool `yaml:"density_killer_enabled"`
+			DensityKillerIgnoreWhitesBelow int  `yaml:"density_killer_ignore_whites_below"`
+			// Force a vendor "Repair All" to replenish javelins in town when quantity is below this % threshold.
+			// Only applied for the Javazon build when DensityKillerEnabled is true.
+			DensityKillerForceRefillBelowPercent int `yaml:"density_killer_force_refill_below_percent"`
+		} `yaml:"javazon"`
 		DruidLeveling struct {
 			UsePacketLearning bool `yaml:"use_packet_learning"`
 		} `yaml:"druid_leveling"`
@@ -266,21 +374,23 @@ type CharacterCfg struct {
 	} `yaml:"character"`
 
 	Game struct {
-		MinGoldPickupThreshold int                   `yaml:"minGoldPickupThreshold"`
-		UseCainIdentify        bool                  `yaml:"useCainIdentify"`
-		DisableIdentifyTome    bool                  `yaml:"disableIdentifyTome"`
-		InteractWithShrines    bool                  `yaml:"interactWithShrines"`
-		InteractWithChests     bool                  `yaml:"interactWithChests"`
-		StopLevelingAt         int                   `yaml:"stopLevelingAt"`
-		IsNonLadderChar        bool                  `yaml:"isNonLadderChar"`
-		ClearTPArea            bool                  `yaml:"clearTPArea"`
-		Difficulty             difficulty.Difficulty `yaml:"difficulty"`
-		RandomizeRuns          bool                  `yaml:"randomizeRuns"`
-		Runs                   []Run                 `yaml:"runs"`
-		CreateLobbyGames       bool                  `yaml:"createLobbyGames"`
-		PublicGameCounter      int                   `yaml:"-"`
-		MaxFailedMenuAttempts  int                   `yaml:"maxFailedMenuAttempts"`
-		Pindleskin             struct {
+		MinGoldPickupThreshold  int                   `yaml:"minGoldPickupThreshold"`
+		UseCainIdentify         bool                  `yaml:"useCainIdentify"`
+		DisableIdentifyTome     bool                  `yaml:"disableIdentifyTome"`
+		InteractWithShrines     bool                  `yaml:"interactWithShrines"`
+		InteractWithChests      bool                  `yaml:"interactWithChests"`
+		InteractWithSuperChests bool                  `yaml:"interactWithSuperChests"`
+		StopLevelingAt          int                   `yaml:"stopLevelingAt"`
+		IsNonLadderChar         bool                  `yaml:"isNonLadderChar"`
+		IsHardCoreChar          bool                  `yaml:"isHardCoreChar"`
+		ClearTPArea             bool                  `yaml:"clearTPArea"`
+		Difficulty              difficulty.Difficulty `yaml:"difficulty"`
+		RandomizeRuns           bool                  `yaml:"randomizeRuns"`
+		Runs                    []Run                 `yaml:"runs"`
+		CreateLobbyGames        bool                  `yaml:"createLobbyGames"`
+		PublicGameCounter       int                   `yaml:"-"`
+		MaxFailedMenuAttempts   int                   `yaml:"maxFailedMenuAttempts"`
+		Pindleskin              struct {
 			SkipOnImmunities []stat.Resist `yaml:"skipOnImmunities"`
 		} `yaml:"pindleskin"`
 		Cows struct {
@@ -296,8 +406,10 @@ type CharacterCfg struct {
 			ClearFloors bool `yaml:"clearFloors"`
 		}
 		Andariel struct {
-			ClearRoom   bool `yaml:"clearRoom"`
-			UseAntidoes bool `yaml:"useAntidoes"`
+			ClearRoom bool `yaml:"clearRoom"`
+			// Deprecated: kept for backwards compatibility with older configs; can be removed in the future.
+			UseAntidoesDeprecated bool `yaml:"useAntidoes,omitempty"`
+			UseAntidotes          bool `yaml:"useAntidotes"`
 		}
 		Duriel struct {
 			UseThawing bool `yaml:"useThawing"`
@@ -374,16 +486,19 @@ type CharacterCfg struct {
 			EnsureKeyBinding         bool     `yaml:"ensureKeyBinding"`
 			AutoEquip                bool     `yaml:"autoEquip"`
 			AutoEquipFromSharedStash bool     `yaml:"autoEquipFromSharedStash"`
-			EnableRunewordMaker       bool     `yaml:"enableRunewordMaker"`
-			NightmareRequiredLevel    int      `yaml:"nightmareRequiredLevel"`
-			HellRequiredLevel         int      `yaml:"hellRequiredLevel"`
-			HellRequiredFireRes       int      `yaml:"hellRequiredFireRes"`
-			HellRequiredLightRes      int      `yaml:"hellRequiredLightRes"`
-			EnabledRunewordRecipes    []string `yaml:"enabledRunewordRecipes"`
+			EnableRunewordMaker      bool     `yaml:"enableRunewordMaker"`
+			NightmareRequiredLevel   int      `yaml:"nightmareRequiredLevel"`
+			HellRequiredLevel        int      `yaml:"hellRequiredLevel"`
+			HellRequiredFireRes      int      `yaml:"hellRequiredFireRes"`
+			HellRequiredLightRes     int      `yaml:"hellRequiredLightRes"`
+			EnabledRunewordRecipes   []string `yaml:"enabledRunewordRecipes"`
 		} `yaml:"leveling"`
 		RunewordMaker struct {
-			Enabled        bool     `yaml:"enabled"`
-			EnabledRecipes []string `yaml:"enabledRunewordRecipes"`
+			Enabled              bool     `yaml:"enabled"`
+			EnabledRecipes       []string `yaml:"enabledRunewordRecipes"`
+			AutoUpgrade          bool     `yaml:"autoUpgrade"`          // Upgrade when better tier base found
+			OnlyIfWearable       bool     `yaml:"onlyIfWearable"`       // Only make if character meets str/dex requirements
+			AutoTierByDifficulty bool     `yaml:"autoTierByDifficulty"` // Auto-select tier based on difficulty
 		} `yaml:"runewordMaker"`
 		LevelingSequence struct {
 			SequenceFile string `yaml:"sequenceFile"`
@@ -417,8 +532,8 @@ type CharacterCfg struct {
 		CompanionGamePassword string `yaml:"companionGamePassword"`
 	} `yaml:"companion"`
 	Gambling struct {
-		Enabled bool        `yaml:"enabled"`
-		Items   []item.Name `yaml:"items"`
+		Enabled bool     `yaml:"enabled"`
+		Items   []string `yaml:"items,omitempty"`
 	} `yaml:"gambling"`
 	Muling struct {
 		Enabled      bool     `yaml:"enabled"`
@@ -512,6 +627,9 @@ func Load() error {
 	if err = d.Decode(&Koolo); err != nil {
 		return fmt.Errorf("error reading config %s: %w", kooloPath, err)
 	}
+	if Koolo != nil {
+		sanitizeDiscordConfig(Koolo)
+	}
 
 	configDir := getAbsPath("config")
 	entries, err := os.ReadDir(configDir)
@@ -539,10 +657,20 @@ func Load() error {
 		}
 		_ = r.Close()
 
+		// Deprecated: kept for backwards compatibility with older configs; can be removed in the future.
+		if !charCfg.Game.Andariel.UseAntidotes && charCfg.Game.Andariel.UseAntidoesDeprecated {
+			charCfg.Game.Andariel.UseAntidotes = true
+		}
+		charCfg.Game.Andariel.UseAntidoesDeprecated = false
+
 		charCfg.ConfigFolderName = entry.Name()
 
 		if charCfg.Game.MaxFailedMenuAttempts == 0 {
 			charCfg.Game.MaxFailedMenuAttempts = 10
+		}
+
+		if len(charCfg.Gambling.Items) == 0 {
+			charCfg.Gambling.Items = []string{"coronet", "circlet", "amulet"}
 		}
 
 		var pickitPath string
@@ -557,14 +685,14 @@ func Load() error {
 			pickitPath = getAbsPath(filepath.Join("config", entry.Name(), "pickit")) + "\\"
 		}
 
-		rules, err := nip.ReadDir(pickitPath)
+		rules, err := getCachedRulesDir(pickitPath)
 		if err != nil {
 			return fmt.Errorf("error reading pickit directory %s: %w", pickitPath, err)
 		}
 
 		// Load the leveling pickit rules
 
-		if len(charCfg.Game.Runs) > 0 && charCfg.Game.Runs[0] == "leveling" || charCfg.Game.Runs[0] == "leveling_sequence" {
+		if len(charCfg.Game.Runs) > 0 && (charCfg.Game.Runs[0] == "leveling" || charCfg.Game.Runs[0] == "leveling_sequence") {
 			nips := getLevelingNipFiles(&charCfg, entry.Name())
 
 			for _, nipFile := range nips {
@@ -593,8 +721,75 @@ func Load() error {
 	return nil
 }
 
-// Helper function to read a single NIP file using the temp directory workaround
-func readSinglePickitFile(filePath string) (nip.Rules, error) {
+func sanitizeDiscordConfig(cfg *KooloCfg) {
+	if !cfg.Discord.Enabled {
+		return
+	}
+	useWebhook := cfg.Discord.UseWebhook
+	webhookURL := strings.TrimSpace(cfg.Discord.WebhookURL)
+	token := strings.TrimSpace(cfg.Discord.Token)
+	channelID := strings.TrimSpace(cfg.Discord.ChannelID)
+
+	if (useWebhook && webhookURL == "") || (!useWebhook && (token == "" || channelID == "")) {
+		cfg.Discord.Enabled = false
+	}
+}
+
+// ClearNIPCache clears the compiled NIP rules cache, forcing recompilation on next load
+func ClearNIPCache() {
+	nipRulesCacheMux.Lock()
+	nipRulesCache = make(map[string]nip.Rules)
+	nipRulesCacheMux.Unlock()
+}
+
+// getCachedRulesDir returns cached NIP rules for a directory, compiling only if not cached
+func getCachedRulesDir(pickitPath string) (nip.Rules, error) {
+	nipRulesCacheMux.RLock()
+	if cached, ok := nipRulesCache[pickitPath]; ok {
+		nipRulesCacheMux.RUnlock()
+		return cached, nil
+	}
+	nipRulesCacheMux.RUnlock()
+
+	// Not cached, compile the rules
+	rules, err := nip.ReadDir(pickitPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	nipRulesCacheMux.Lock()
+	nipRulesCache[pickitPath] = rules
+	nipRulesCacheMux.Unlock()
+
+	return rules, nil
+}
+
+// getCachedRulesFile returns cached NIP rules for a single file, compiling only if not cached
+func getCachedRulesFile(filePath string) (nip.Rules, error) {
+	nipRulesCacheMux.RLock()
+	if cached, ok := nipRulesCache[filePath]; ok {
+		nipRulesCacheMux.RUnlock()
+		return cached, nil
+	}
+	nipRulesCacheMux.RUnlock()
+
+	// Not cached, compile via temp directory workaround
+	rules, err := readSinglePickitFileUncached(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	nipRulesCacheMux.Lock()
+	nipRulesCache[filePath] = rules
+	nipRulesCacheMux.Unlock()
+
+	return rules, nil
+}
+
+// Helper function to read a single NIP file using the temp directory workaround (uncached)
+func readSinglePickitFileUncached(filePath string) (nip.Rules, error) {
 	tempDir := filepath.Join(filepath.Dir(filePath), "temp_single_read")
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create temp pickit directory: %w", err)
@@ -616,6 +811,11 @@ func readSinglePickitFile(filePath string) (nip.Rules, error) {
 	}
 
 	return rules, nil
+}
+
+// readSinglePickitFile returns cached NIP rules for a single file (for backwards compatibility)
+func readSinglePickitFile(filePath string) (nip.Rules, error) {
+	return getCachedRulesFile(filePath)
 }
 
 func CreateFromTemplate(name string) error {
@@ -645,6 +845,10 @@ func ValidateAndSaveConfig(config KooloCfg) error {
 
 	if _, err := os.Stat(config.D2RPath + "/d2r.exe"); os.IsNotExist(err) {
 		return errors.New("D2RPath is not valid")
+	}
+
+	if config.Discord.Enabled {
+		sanitizeDiscordConfig(&config)
 	}
 
 	text, err := yaml.Marshal(config)

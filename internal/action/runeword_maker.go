@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/hectorgimenez/d2go/pkg/data"
+	"github.com/hectorgimenez/d2go/pkg/data/difficulty"
 	"github.com/hectorgimenez/d2go/pkg/data/item"
 	"github.com/hectorgimenez/d2go/pkg/data/stat"
 	"github.com/hectorgimenez/koolo/internal/action/step"
-	"github.com/hectorgimenez/koolo/internal/config"
 	"github.com/hectorgimenez/koolo/internal/context"
 	"github.com/hectorgimenez/koolo/internal/game"
 	"github.com/hectorgimenez/koolo/internal/pickit"
@@ -55,17 +55,44 @@ func MakeRunewords() error {
 		ctx.Logger.Debug("Runeword recipe is enabled, processing", "recipe", recipe.Name)
 
 		continueProcessing := true
+		skippedBases := make(map[data.UnitID]struct{})
 		for continueProcessing {
-			if baseItem, hasBase := hasBaseForRunewordRecipe(baseItems, recipe); hasBase {
+			candidateBases := baseItems
+			if len(skippedBases) > 0 {
+				filteredBases := make([]data.Item, 0, len(baseItems))
+				for _, base := range baseItems {
+					if _, skip := skippedBases[base.UnitID]; skip {
+						continue
+					}
+					filteredBases = append(filteredBases, base)
+				}
+				candidateBases = filteredBases
+			}
+			if baseItem, hasBase := hasBaseForRunewordRecipe(candidateBases, recipe); hasBase {
 				existingTier, hasExisting := currentRunewordBaseTier(ctx, recipe, baseItem.Type().Name)
 
-				if isLevelingChar && hasExisting && (len(recipe.BaseSortOrder) == 0 || baseItem.Desc().Tier() <= existingTier) {
-					ctx.Logger.Debug("Skipping recipe - existing runeword has equal or better tier in same base type",
+				// Check if we should skip this base due to tier upgrade logic
+				// For leveling characters: always apply tier check (existing behavior)
+				// For non-leveling: only apply if AutoUpgrade is enabled
+				shouldCheckUpgrade := isLevelingChar || cfg.Game.RunewordMaker.AutoUpgrade
+				if shouldCheckUpgrade && hasExisting && (len(recipe.BaseSortOrder) == 0 || baseItem.Desc().Tier() <= existingTier) {
+					ctx.Logger.Debug("Skipping base - existing runeword has equal or better tier in same base type",
 						"recipe", recipe.Name,
 						"baseType", baseItem.Type().Name,
 						"existingTier", existingTier,
 						"newBaseTier", baseItem.Desc().Tier())
-					continueProcessing = false
+					skippedBases[baseItem.UnitID] = struct{}{}
+					continue
+				}
+
+				// Check if character can wear this item (if OnlyIfWearable is enabled)
+				if cfg.Game.RunewordMaker.OnlyIfWearable && !characterMeetsRequirements(ctx, baseItem) {
+					ctx.Logger.Debug("Skipping base - character cannot wear this base item",
+						"recipe", recipe.Name,
+						"base", baseItem.Name,
+						"requiredStr", baseItem.Desc().RequiredStrength,
+						"requiredDex", baseItem.Desc().RequiredDexterity)
+					skippedBases[baseItem.UnitID] = struct{}{}
 					continue
 				}
 
@@ -217,7 +244,8 @@ func SocketItems(ctx *context.Status, recipe Runeword, base data.Item, items ...
 				ctx.HID.Click(game.LeftButton, basescreenPos.X, basescreenPos.Y)
 				utils.Sleep(300)
 				if itm.Location.LocationType == item.LocationCursor {
-					DropMouseItem()
+					step.CloseAllMenus()
+					DropAndRecoverCursorItem()
 					return fmt.Errorf("failed to insert item %s into base %s", itm.Name, base.Name)
 				}
 			}
@@ -256,52 +284,44 @@ func hasBaseForRunewordRecipe(items []data.Item, recipe Runeword) (data.Item, bo
 	ov, hasOverride := overrides[string(recipe.Name)]
 	useOverride := !isLevelingChar && hasOverride
 
-	// Prefer reroll rule base constraints (when configured) over runeword overrides.
-	var ruleOverride *config.RunewordRerollRule
-	if !isLevelingChar {
-		if rules, ok := ctx.CharacterCfg.Game.RunewordRerollRules[string(recipe.Name)]; ok {
-			for i := range rules {
-				rule := &rules[i]
-				if rule.BaseName != "" || rule.BaseType != "" || rule.BaseTier != "" || rule.EthMode != "" || rule.QualityMode != "" {
-					ruleOverride = rule
-					break
-				}
-			}
-		}
-	}
-
+	// Runeword maker uses per-runeword overrides only; reroll rules apply during reroll checks.
 	effectiveEthMode := ""
 	effectiveQualityMode := ""
 	effectiveBaseType := ""
 	effectiveBaseTier := ""
 	effectiveBaseName := ""
-	if ruleOverride != nil {
-		effectiveEthMode = strings.ToLower(strings.TrimSpace(ruleOverride.EthMode))
-		effectiveQualityMode = strings.ToLower(strings.TrimSpace(ruleOverride.QualityMode))
-		effectiveBaseType = strings.TrimSpace(ruleOverride.BaseType)
-		effectiveBaseTier = strings.ToLower(strings.TrimSpace(ruleOverride.BaseTier))
-		effectiveBaseName = strings.TrimSpace(ruleOverride.BaseName)
-	}
-	if effectiveEthMode == "" || effectiveEthMode == "any" {
-		effectiveEthMode = ""
-		if useOverride && ov.EthMode != "" {
-			effectiveEthMode = strings.ToLower(strings.TrimSpace(ov.EthMode))
+	if useOverride && ov.EthMode != "" {
+		effectiveEthMode = strings.ToLower(strings.TrimSpace(ov.EthMode))
+		if effectiveEthMode == "any" {
+			effectiveEthMode = ""
 		}
 	}
-	if effectiveQualityMode == "" || effectiveQualityMode == "any" {
-		effectiveQualityMode = ""
-		if useOverride && ov.QualityMode != "" {
-			effectiveQualityMode = strings.ToLower(strings.TrimSpace(ov.QualityMode))
+	if useOverride && ov.QualityMode != "" {
+		effectiveQualityMode = strings.ToLower(strings.TrimSpace(ov.QualityMode))
+		if effectiveQualityMode == "any" {
+			effectiveQualityMode = ""
 		}
 	}
-	if effectiveBaseType == "" && useOverride && ov.BaseType != "" {
-		effectiveBaseType = ov.BaseType
+	if useOverride && ov.BaseType != "" {
+		effectiveBaseType = strings.TrimSpace(ov.BaseType)
 	}
-	if effectiveBaseTier == "" && useOverride && ov.BaseTier != "" {
+	if useOverride && ov.BaseTier != "" {
 		effectiveBaseTier = strings.ToLower(strings.TrimSpace(ov.BaseTier))
 	}
-	if effectiveBaseName == "" && useOverride && ov.BaseName != "" {
+	if useOverride && ov.BaseName != "" {
 		effectiveBaseName = strings.TrimSpace(ov.BaseName)
+	}
+
+	// Auto-select tier based on difficulty if enabled and no manual tier set
+	if effectiveBaseTier == "" && ctx.CharacterCfg.Game.RunewordMaker.AutoTierByDifficulty {
+		switch ctx.CharacterCfg.Game.Difficulty {
+		case difficulty.Normal:
+			effectiveBaseTier = "normal"
+		case difficulty.Nightmare:
+			effectiveBaseTier = "exceptional"
+		case difficulty.Hell:
+			effectiveBaseTier = "elite"
+		}
 	}
 
 	var validBases []data.Item
@@ -320,8 +340,19 @@ func hasBaseForRunewordRecipe(items []data.Item, recipe Runeword) (data.Item, bo
 		}
 
 		// Apply user-specified base type restriction when not leveling.
-		if effectiveBaseType != "" && itemType != effectiveBaseType {
-			continue
+		// Supports comma-separated list for multiple base types (e.g., "sword,shield" for Spirit)
+		if effectiveBaseType != "" {
+			allowedTypes := strings.Split(effectiveBaseType, ",")
+			typeAllowed := false
+			for _, t := range allowedTypes {
+				if strings.TrimSpace(t) == itemType {
+					typeAllowed = true
+					break
+				}
+			}
+			if !typeAllowed {
+				continue
+			}
 		}
 
 		// exception to use only 1-handed maces/clubs for steel/malice/strength for barb leveling
@@ -510,4 +541,24 @@ func hasItemsForRunewordRecipe(items []data.Item, recipe Runeword) ([]data.Item,
 	}
 
 	return nil, false
+}
+
+// characterMeetsRequirements checks if the character has enough strength and dexterity to wear an item
+func characterMeetsRequirements(ctx *context.Status, itm data.Item) bool {
+	strStat, hasStr := ctx.Data.PlayerUnit.BaseStats.FindStat(stat.Strength, 0)
+	dexStat, hasDex := ctx.Data.PlayerUnit.BaseStats.FindStat(stat.Dexterity, 0)
+
+	charStr := 0
+	charDex := 0
+	if hasStr {
+		charStr = strStat.Value
+	}
+	if hasDex {
+		charDex = dexStat.Value
+	}
+
+	reqStr := itm.Desc().RequiredStrength
+	reqDex := itm.Desc().RequiredDexterity
+
+	return charStr >= reqStr && charDex >= reqDex
 }

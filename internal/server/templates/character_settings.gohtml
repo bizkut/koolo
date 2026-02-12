@@ -11,24 +11,257 @@
     <script src="../assets/js/Sortable.min.js"></script>
     <script src="../assets/js/character_settings.js"></script>
     <script src="../assets/js/character_bulk_apply.js"></script>
-    <title>Koolo Settings</title>
+    <title>Koolo Resurrected Settings</title>
+    <style>
+    .col-lock-btn {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.7rem;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text-secondary);
+        transition: all var(--transition-fast);
+    }
+    .col-lock-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--primary);
+        color: var(--text-primary);
+    }
+    .col-lock-btn i {
+        font-size: 0.75rem;
+    }
+    .auto-stat-skill-settings {
+        margin: 12px 0 20px;
+        padding: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.02);
+    }
+    .auto-stat-skill-hidden {
+        display: none;
+    }
+    .auto-stat-skill-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 12px;
+    }
+    .auto-stat-skill-row {
+        display: grid;
+        grid-template-columns: 28px 1fr 110px 72px;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+        counter-increment: autoStatSkillRow;
+    }
+    .auto-stat-skill-row:last-child {
+        margin-bottom: 0;
+    }
+    .auto-stat-skill-row-actions {
+        display: inline-flex;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+    .auto-stat-skill-checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+    .auto-stat-skill-list {
+        counter-reset: autoStatSkillRow;
+    }
+    .auto-stat-skill-index {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        cursor: grab;
+    }
+    .auto-stat-skill-index::before {
+        content: counter(autoStatSkillRow);
+    }
+    .auto-stat-skill-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+    .auto-stat-skill-section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+    .auto-stat-skill-total {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+    }
+    .auto-stat-skill-help {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+    }
+    .auto-stat-skill-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 0px;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        width: 100%;
+    }
+    .auto-stat-skill-respec {
+        display: contents;
+    }
+    .auto-stat-skill-respec.auto-stat-skill-hidden {
+        display: contents;
+        visibility: hidden;
+        pointer-events: none;
+    }
+    .auto-stat-skill-respec label {
+        margin: 0;
+    }
+    .auto-stat-skill-header-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 32px;
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    #autoRespecTargetRow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 32px;
+        flex-wrap: nowrap;
+    }
+    .auto-respec-hidden {
+        visibility: hidden;
+        pointer-events: none;
+    }
+    .auto-stat-skill-respec input[type="number"] {
+        width: 120px;
+    }
+    .auto-respec-token-first {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 6px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+    .auto-stat-skill-settings select {
+        color-scheme: light;
+        color: #111;
+        background: #fff;
+    }
+    .auto-stat-skill-settings select option {
+        color: #111;
+        background: #fff;
+    }
+    .auto-stat-skill-remove {
+        padding: 0.2rem 0.4rem;
+        min-width: 32px;
+        height: 32px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-color: #b42318;
+        background: rgba(180, 35, 24, 0.15);
+        color: #b42318;
+    }
+    .auto-stat-skill-remove:hover {
+        background: rgba(180, 35, 24, 0.25);
+        border-color: #b42318;
+        color: #b42318;
+    }
+    .auto-stat-skill-add {
+        padding: 0.2rem 0.4rem;
+        min-width: 32px;
+        height: 32px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-color: #2f9e44;
+        background: rgba(47, 158, 68, 0.15);
+        color: #2f9e44;
+    }
+    .auto-stat-skill-add:hover {
+        background: rgba(47, 158, 68, 0.25);
+        border-color: #2f9e44;
+        color: #2f9e44;
+    }
+    @media (max-width: 900px) {
+        .auto-stat-skill-columns {
+            grid-template-columns: 1fr;
+        }
+        .auto-stat-skill-row {
+            grid-template-columns: 28px 1fr 90px 72px;
+        }
+        .auto-stat-skill-header {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .auto-stat-skill-header-item {
+            flex: 1 1 100%;
+        }
+    }
+    </style>
 </head>
 <body>
-<main class="container">
-    {{ if ne .ErrorMessage "" }}
-    <div class="container">
-        <div class="row">
-            <div class="col">
-                <div class="error-message">
-                    {{ .ErrorMessage }}
+<main class="container settings-page">
+    <div class="settings-layout">
+        <nav class="settings-nav icon-only hover-expand" aria-label="Character settings sections">
+            <h6>Sections</h6>
+            <a href="#general-settings" aria-label="General" title="General"><i class="bi bi-gear"></i><span class="nav-text">General</span></a>
+            <a href="#client-settings" aria-label="Client" title="Client"><i class="bi bi-window"></i><span class="nav-text">Client</span></a>
+            <a href="#battle-net-settings" aria-label="Battle.net" title="Battle.net"><i class="bi bi-globe2"></i><span class="nav-text">Battle.net</span></a>
+            <a href="#scheduler-section" aria-label="Scheduler" title="Scheduler"><i class="bi bi-calendar-week"></i><span class="nav-text">Scheduler</span></a>
+            <a href="#health-settings" aria-label="Health" title="Health"><i class="bi bi-heart"></i><span class="nav-text">Health</span></a>
+            <a href="#chicken-curses-auras" aria-label="Chicken Curses/Auras" title="Chicken Curses/Auras"><i class="bi bi-exclamation-triangle"></i><span class="nav-text">Curses/Auras</span></a>
+            <a href="#merc-settings" aria-label="Merc" title="Merc"><i class="bi bi-person-badge"></i><span class="nav-text">Merc</span></a>
+            <a href="#inventory-settings" aria-label="Inventory" title="Inventory"><i class="bi bi-grid-3x3-gap"></i><span class="nav-text">Inventory</span></a>
+            <a href="#game-settings" aria-label="Game" title="Game"><i class="bi bi-controller"></i><span class="nav-text">Game</span></a>
+            <a href="#companion-settings" aria-label="Companion" title="Companion"><i class="bi bi-people"></i><span class="nav-text">Companion</span></a>
+            <a href="#run-settings" aria-label="Runs" title="Runs"><i class="bi bi-play-circle"></i><span class="nav-text">Runs</span></a>
+            <a href="#gambling-settings" aria-label="Gambling" title="Gambling"><i class="bi bi-cash-coin"></i><span class="nav-text">Gambling</span></a>
+            <a href="#muling-settings" aria-label="Muling" title="Muling"><i class="bi bi-box-seam"></i><span class="nav-text">Muling</span></a>
+            <a href="#runeword-settings" aria-label="Runeword" title="Runeword"><i class="bi bi-gem"></i><span class="nav-text">Runeword</span></a>
+            <a href="#cube-recipes" aria-label="Cube" title="Cube"><i class="bi bi-box"></i><span class="nav-text">Cube</span></a>
+            <a href="#back-to-town-settings" aria-label="Back to town" title="Back to town"><i class="bi bi-house-door"></i><span class="nav-text">Back to town</span></a>
+            <div class="settings-nav-toggle">
+                <label title="Toggle hover expand">
+                    <input type="checkbox" id="navHoverToggle" aria-label="Toggle hover expand">
+                    <i id="navHoverToggleIcon" class="bi bi-arrows-angle-expand" aria-hidden="true"></i>
+                    <span id="navHoverToggleText" class="toggle-text">Hover expand on</span>
+                </label>
+            </div>
+        </nav>
+        <div class="settings-content">
+            {{ if ne .ErrorMessage "" }}
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <div class="error-message">
+                            {{ .ErrorMessage }}
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-    {{ end }}
-    <div class="notification">
-        <h3>General Settings</h3><br>
-        <form method="post" autocomplete="off" class="compact-form">
+            {{ end }}
+            <div class="notification">
+                <h3 id="general-settings"><i class="bi bi-gear section-icon" aria-hidden="true"></i>Character Settings for {{ .Supervisor }}</h3><br>
+                <form method="post" autocomplete="off" class="compact-form">
             <input type="hidden" name="cloneSource" value="{{ .CloneSource }}"/>
             <div class="supervisor-input-row">
                 <label {{ if ne .Supervisor "" }}hidden="hidden"{{ end }}>
@@ -91,23 +324,215 @@
                         <option value="amazon_leveling" {{ if eq .Config.Character.Class "amazon_leveling" }}selected{{ end }}>Amazon (Leveling)</option>
                         <option value="berserker" {{ if eq .Config.Character.Class "berserker" }}selected{{ end }}>Berserk Barbarian</option>
                         <option value="warcry_barb" {{ if eq .Config.Character.Class "warcry_barb" }}selected{{ end }}>Warcry Barbarian</option>
+                        <option value="whirlwind_barb" {{ if eq .Config.Character.Class "whirlwind_barb" }}selected{{ end }}>Whirlwind Barbarian</option>
                     </select>
                 </label>
                 <label>
                     Character name
-                   <input name="characterName" placeholder="{{ .Config.CharacterName }}" value="{{ .Config.CharacterName }}" minlength="2" maxlength="16" oninput="this.value = this.value.replace(/[0-9]/g, ''); if(this.value.length > 15) this.value = this.value.slice(0, 15);"/>                </label>
-                <label>
-                    <input type="checkbox" name="isNonLadderChar" {{ if .Config.Game.IsNonLadderChar }}checked{{ end }}/>
-                    Non-Ladder
-                </label>
+                   <input name="characterName" placeholder="{{ .Config.CharacterName }}" value="{{ .Config.CharacterName }}" data-last-valid="{{ .Config.CharacterName }}" minlength="2" maxlength="16" oninput="validateCharacterName(this)"/>                </label>
+                <div class="ladder-toggle-group">
+                    <label class="non-ladder-checkbox-container">
+                        <input type="checkbox" name="isNonLadderChar" {{ if .Config.Game.IsNonLadderChar }}checked{{ end }}/>
+                        Non-Ladder
+                    </label>
+                    <label class="non-ladder-checkbox-container">
+                        <input type="checkbox" name="isHardCoreChar" {{ if .Config.Game.IsHardCoreChar }}checked{{ end }}/>
+                        H.C
+                    </label>
+                </div>
+                
             </fieldset>
                 <label style="margin-top: 0px; margin-bottom: 5px;">
                     <input type="checkbox" name="autoCreateCharacter" {{ if .Config.AutoCreateCharacter }}checked{{ end }}/>
                     Auto-create character (one-time)
-                    <br><small>If enabled, Koolo will automatically create this character once when no character with this name exists, using the selected class and ladder type.</small>
+                                        <br><small>If enabled, Koolo creates this character once (if missing) with the selected class, ladder type, and HARD CORE. ⚠️ Keep focus during creation.</small>
                 </label>
             <article style="margin-top: 20px; margin-bottom: 20px; padding: 15px; border: 2px solid #444;">
                 <h5>Class-Specific Settings</h5>
+                <div class="auto-stat-skill-settings {{ if and .Config (isLevelingBuild .Config.Character.Class) }}auto-stat-skill-hidden{{ end }}">
+                    <div class="auto-stat-skill-header">
+                        <label class="auto-stat-skill-header-item">
+                            <input type="checkbox" id="autoStatSkillEnabled" name="autoStatSkillEnabled" {{ if .Config.Character.AutoStatSkill.Enabled }}checked{{ end }}/>
+                            Enable Auto Stat & Skill
+                        </label>
+                        <div id="autoStatSkillRespec" class="auto-stat-skill-respec {{ if not .Config.Character.AutoStatSkill.Enabled }}auto-stat-skill-hidden{{ end }}">
+                        <label class="auto-stat-skill-header-item">
+                            <input type="checkbox" id="autoRespecEnabled" name="autoRespecEnabled" {{ if .Config.Character.AutoStatSkill.Respec.Enabled }}checked{{ end }} {{ if not .Config.Character.AutoStatSkill.Enabled }}disabled{{ end }}/>
+                            Enable Auto Respec
+                        </label>
+                            <label id="autoRespecTokenFirstRow" class="auto-stat-skill-header-item auto-respec-token-first {{ if not .Config.Character.AutoStatSkill.Respec.Enabled }}auto-respec-hidden{{ end }}">
+                                <input type="checkbox" name="autoRespecTokenFirst" {{ if .Config.Character.AutoStatSkill.Respec.TokenFirst }}checked{{ end }} {{ if not .Config.Character.AutoStatSkill.Respec.Enabled }}disabled{{ end }}/>
+                                Token first
+                            </label>
+                        <label id="autoRespecTargetRow" class="auto-stat-skill-header-item {{ if not .Config.Character.AutoStatSkill.Respec.Enabled }}auto-respec-hidden{{ end }}">
+                            Target level:
+                            <input type="number" name="autoRespecTargetLevel" min="0" max="99" value="{{ .Config.Character.AutoStatSkill.Respec.TargetLevel }}" placeholder="e.g. 80" {{ if not .Config.Character.AutoStatSkill.Respec.Enabled }}disabled{{ end }}>
+                        </label>
+                        </div>
+                    </div>
+                    <small id="autoStatSkillHelp" class="auto-stat-skill-help {{ if not .Config.Character.AutoStatSkill.Enabled }}auto-stat-skill-hidden{{ end }}" {{ if not .Config.Character.AutoStatSkill.Enabled }}hidden{{ end }}>
+                        Skills and stats allocated in order shown. Drag numbers to reorder. Missing skill prerequisites automatically assigned.
+                    </small>
+                    <small id="autoRespecHelp" class="auto-stat-skill-help {{ if not .Config.Character.AutoStatSkill.Respec.Enabled }}auto-stat-skill-hidden{{ end }}" {{ if not .Config.Character.AutoStatSkill.Respec.Enabled }}hidden{{ end }}>
+                        At target level, resets and reallocates stats/skills. Tries Akara first, then uses a token if unavailable. Set target level to 0 or leave it blank to respec immediately.
+                    </small>
+                    <div id="autoStatSkillPanel">
+                        <script>
+                            window.autoStatSkillPrereqs = {{ toJSON .SkillPrereqs }};
+                        </script>
+                        <div class="auto-stat-skill-columns">
+                            <div>
+                                <div class="auto-stat-skill-section-head">
+                                    <h6>Stats</h6>
+                                    <span class="auto-stat-skill-total" id="autoStatSkillStatTotal">Total: 0</span>
+                                </div>
+                                <div id="autoStatSkillStats" class="auto-stat-skill-list">
+                                    {{ if .Config.Character.AutoStatSkill.Stats }}
+                                        {{ range .Config.Character.AutoStatSkill.Stats }}
+                                            <div class="auto-stat-skill-row">
+                                                <span class="auto-stat-skill-index" aria-hidden="true"></span>
+                                                <select name="autoStatSkillStat[]">
+                                                    <option value="">-- Select stat --</option>
+                                                    <option value="strength" {{ if eq .Stat "strength" }}selected{{ end }}>Strength</option>
+                                                    <option value="dexterity" {{ if eq .Stat "dexterity" }}selected{{ end }}>Dexterity</option>
+                                                    <option value="vitality" {{ if eq .Stat "vitality" }}selected{{ end }}>Vitality</option>
+                                                    <option value="energy" {{ if eq .Stat "energy" }}selected{{ end }}>Energy</option>
+                                                </select>
+                                                <input type="number" name="autoStatSkillStatTarget[]" min="1" value="{{ .Target }}" placeholder="Target">
+                                                <div class="auto-stat-skill-row-actions">
+                                                    <button type="button" class="btn btn-outline auto-stat-skill-remove" title="Remove stat step">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline auto-stat-skill-add" data-kind="stat" title="Add stat step" aria-label="Add stat step">
+                                                        <i class="bi bi-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        {{ end }}
+                                    {{ else }}
+                                        <div class="auto-stat-skill-row">
+                                            <span class="auto-stat-skill-index" aria-hidden="true"></span>
+                                            <select name="autoStatSkillStat[]">
+                                                <option value="">-- Select stat --</option>
+                                                <option value="strength">Strength</option>
+                                                <option value="dexterity">Dexterity</option>
+                                                <option value="vitality">Vitality</option>
+                                                <option value="energy">Energy</option>
+                                            </select>
+                                            <input type="number" name="autoStatSkillStatTarget[]" min="1" placeholder="Target">
+                                            <div class="auto-stat-skill-row-actions">
+                                                <button type="button" class="btn btn-outline auto-stat-skill-remove" title="Remove stat step">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline auto-stat-skill-add" data-kind="stat" title="Add stat step" aria-label="Add stat step">
+                                                    <i class="bi bi-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {{ end }}
+                                </div>
+                                <label class="auto-stat-skill-checkbox">
+                                    <input type="checkbox" name="autoStatSkillExcludeQuestStats" id="autoStatSkillExcludeQuestStats" {{ if .Config.Character.AutoStatSkill.ExcludeQuestStats }}checked{{ end }}/>
+                                    Exclude quest points from level estimate <span id="autoStatSkillExcludeQuestStatsDifficulty"></span>
+                                </label>
+                            </div>
+                            <div>
+                                <div class="auto-stat-skill-section-head">
+                                    <h6>Skills</h6>
+                                    <span class="auto-stat-skill-total" id="autoStatSkillSkillTotal">Total: 0</span>
+                                </div>
+                                <div id="autoStatSkillSkills" class="auto-stat-skill-list">
+                                    {{ if .Config.Character.AutoStatSkill.Skills }}
+                                        {{ range $step := .Config.Character.AutoStatSkill.Skills }}
+                                            <div class="auto-stat-skill-row">
+                                                <span class="auto-stat-skill-index" aria-hidden="true"></span>
+                                                <select name="autoStatSkillSkill[]">
+                                                    <option value="">-- Select skill --</option>
+                                                    {{ range $opt := $topLevelContext.SkillOptions }}
+                                                        <option value="{{ $opt.Key }}" {{ if eq $step.Skill $opt.Key }}selected{{ end }}>{{ $opt.Name }}</option>
+                                                    {{ end }}
+                                                </select>
+                                                <input type="number" name="autoStatSkillSkillTarget[]" min="1" max="20" value="{{ $step.Target }}" placeholder="Target">
+                                                <div class="auto-stat-skill-row-actions">
+                                                    <button type="button" class="btn btn-outline auto-stat-skill-remove" title="Remove skill step">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline auto-stat-skill-add" data-kind="skill" title="Add skill step" aria-label="Add skill step">
+                                                        <i class="bi bi-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        {{ end }}
+                                {{ else }}
+                                    <div class="auto-stat-skill-row">
+                                        <span class="auto-stat-skill-index" aria-hidden="true"></span>
+                                        <select name="autoStatSkillSkill[]">
+                                            <option value="">-- Select skill --</option>
+                                            {{ range $topLevelContext.SkillOptions }}
+                                                <option value="{{ .Key }}">{{ .Name }}</option>
+                                            {{ end }}
+                                        </select>
+                                        <input type="number" name="autoStatSkillSkillTarget[]" min="1" max="20" placeholder="Target">
+                                        <div class="auto-stat-skill-row-actions">
+                                            <button type="button" class="btn btn-outline auto-stat-skill-remove" title="Remove skill step">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline auto-stat-skill-add" data-kind="skill" title="Add skill step" aria-label="Add skill step">
+                                                <i class="bi bi-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                {{ end }}
+                                </div>
+                                <label class="auto-stat-skill-checkbox">
+                                    <input type="checkbox" name="autoStatSkillExcludeQuestSkills" id="autoStatSkillExcludeQuestSkills" {{ if .Config.Character.AutoStatSkill.ExcludeQuestSkills }}checked{{ end }}/>
+                                    Exclude quest points from level estimate <span id="autoStatSkillExcludeQuestSkillsDifficulty"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <template id="autoStatSkillStatRowTemplate">
+                            <div class="auto-stat-skill-row">
+                                <span class="auto-stat-skill-index" aria-hidden="true"></span>
+                                <select name="autoStatSkillStat[]">
+                                    <option value="">-- Select stat --</option>
+                                    <option value="strength">Strength</option>
+                                    <option value="dexterity">Dexterity</option>
+                                    <option value="vitality">Vitality</option>
+                                    <option value="energy">Energy</option>
+                                </select>
+                                <input type="number" name="autoStatSkillStatTarget[]" min="1" placeholder="Target">
+                                <div class="auto-stat-skill-row-actions">
+                                    <button type="button" class="btn btn-outline auto-stat-skill-remove" title="Remove stat step">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline auto-stat-skill-add" data-kind="stat" title="Add stat step" aria-label="Add stat step">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                        <template id="autoStatSkillSkillRowTemplate">
+                            <div class="auto-stat-skill-row">
+                                <span class="auto-stat-skill-index" aria-hidden="true"></span>
+                                <select name="autoStatSkillSkill[]">
+                                    <option value="">-- Select skill --</option>
+                                    {{ range $topLevelContext.SkillOptions }}
+                                        <option value="{{ .Key }}">{{ .Name }}</option>
+                                    {{ end }}
+                                </select>
+                                <input type="number" name="autoStatSkillSkillTarget[]" min="1" max="20" placeholder="Target">
+                                <div class="auto-stat-skill-row-actions">
+                                    <button type="button" class="btn btn-outline auto-stat-skill-remove" title="Remove skill step">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline auto-stat-skill-add" data-kind="skill" title="Add skill step" aria-label="Add skill step">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
                 <div id="class-specific-settings">
                     <div id="no-settings-message" style="display: none;">
                         No custom settings available for this class.
@@ -162,6 +587,25 @@
                         <label>
                             Monster Check Range (yards)
                             <input type="number" name="berserkerBarbHorkMonsterCheckRange" min="1" max="20" step="1" value="{{ if .Config.Character.BerserkerBarb.HorkMonsterCheckRange }}{{ .Config.Character.BerserkerBarb.HorkMonsterCheckRange }}{{ else }}7{{ end }}">
+                        </label>
+                    </fieldset>
+                </div>
+                <div class="whirlwind-barb-options" style="display: none;">
+                    <fieldset class="grid">
+                        <label>
+                            <input type="checkbox" name="barbSkipPotionPickupInTravincal" {{ if .Config.Character.WhirlwindBarb.SkipPotionPickupInTravincal }}checked{{ end }}/>
+                            Skip potion pickup during Travincal
+                        </label>
+                    </fieldset>
+                    <div style="margin: 20px 0;"></div>
+                    <fieldset style="margin-top: 15px;">
+                        <label>
+                            <input type="checkbox" name="WhirlwindBarbHorkNormalMonsters" {{ if .Config.Character.WhirlwindBarb.HorkNormalMonsters }}checked{{ end }}/>
+                            Hork Normal Monsters Too
+                        </label>
+                        <label>
+                            Monster Check Range (yards)
+                            <input type="number" name="WhirlwindBarbHorkMonsterCheckRange" min="1" max="20" step="1" value="{{ if .Config.Character.WhirlwindBarb.HorkMonsterCheckRange }}{{ .Config.Character.WhirlwindBarb.HorkMonsterCheckRange }}{{ else }}7{{ end }}">
                         </label>
                     </fieldset>
                 </div>
@@ -323,15 +767,50 @@
         </label>
     </fieldset>
 </div>
+
+<div class="javazon-options" style="display: none;">
+    <fieldset class="grid">
+        <label style="font-weight: bold; margin-bottom: 10px; display: block;">
+            <input type="checkbox"
+                   id="javazonDensityKillerEnabled"
+                   name="javazonDensityKillerEnabled"
+                   {{ if .Config.Character.Javazon.DensityKillerEnabled }}checked{{ end }}/>
+            Density Killer (Fury packs / ignore leftovers)
+        </label>
+        <label> Ignore Monsters <=
+            <input type="number"
+                   id="javazonDensityKillerIgnoreWhitesBelow"
+                   name="javazonDensityKillerIgnoreWhitesBelow"
+                   min="0"
+                   max="20"
+                   step="1"
+                   value="{{ if .Config.Character.Javazon.DensityKillerIgnoreWhitesBelow }}{{ .Config.Character.Javazon.DensityKillerIgnoreWhitesBelow }}{{ else }}4{{ end }}">
+        </label>
+
+        <label>
+            Quantity refill% &lt;
+            <input type="number"
+                   id="javazonDensityKillerForceRefillBelowPercent"
+                   name="javazonDensityKillerForceRefillBelowPercent"
+                   min="1"
+                   max="100"
+                   step="1"
+                   value="{{ if .Config.Character.Javazon.DensityKillerForceRefillBelowPercent }}{{ .Config.Character.Javazon.DensityKillerForceRefillBelowPercent }}{{ else }}50{{ end }}">
+        </label>
+        <small id="javazonForceRefillHint" style="opacity: 0.8;">Quantity refill &lt; {{ if .Config.Character.Javazon.DensityKillerForceRefillBelowPercent }}{{ .Config.Character.Javazon.DensityKillerForceRefillBelowPercent }}{{ else }}50{{ end }}%</small>
+        <small style="opacity: 0.8;">Loot safety: when picking an item, the bot clears a 4-tile radius around it to avoid pickup retries/blacklist.</small>
+    </fieldset>
+</div>
+
                 <div class="blizzard-sorceress-options" style="display: none;">
                     <fieldset class="grid">
                         <label>
                             <input type="checkbox" id="blizzardUseMoatTrick" name="blizzardUseMoatTrick" {{ if .Config.Character.BlizzardSorceress.UseMoatTrick }}checked{{ end }}/>
-                            Use moat trick                        
+                            Use moat trick
                         </label>
                         <label>
                             <input type="checkbox" id="blizzardUseStaticOnMephisto" name="blizzardUseStaticOnMephisto" {{ if .Config.Character.BlizzardSorceress.UseStaticOnMephisto }}checked{{ end }}/>
-                            Use static on Mephisto    
+                            Use static on Mephisto
                         </label>
                     </fieldset>
                 </div>
@@ -339,11 +818,11 @@
                     <fieldset class="grid">
                         <label>
                             <input type="checkbox" id="levelingUseMoatTrick" name="levelingUseMoatTrick" {{ if .Config.Character.SorceressLeveling.UseMoatTrick }}checked{{ end }}/>
-                            Use moat trick                        
+                            Use moat trick
                         </label>
                         <label>
                             <input type="checkbox" id="levelingUseStaticOnMephisto" name="levelingUseStaticOnMephisto" {{ if .Config.Character.SorceressLeveling.UseStaticOnMephisto }}checked{{ end }}/>
-                            Use static on Mephisto                       
+                            Use static on Mephisto
                         </label>
                         <label>
                             <input type="checkbox" id="levelingUsePacketLearning" name="levelingUsePacketLearning" {{ if .Config.Character.SorceressLeveling.UsePacketLearning }}checked{{ end }}/>
@@ -433,7 +912,8 @@
                 <h5>General Settings</h5>
                 <fieldset class="grid">
                     <label>
-                        <input type="checkbox" id="characterUseExtraBuffs" name="characterUseExtraBuffs" {{ if .Config.Character.UseExtraBuffs }}checked{{ end }}/>Enable extra buff features
+                        <input type="checkbox" name="useCainIdentify" {{ if .Config.Game.UseCainIdentify }}checked{{ end }}/>
+                        Identify with Cain (forced for levelers)
                     </label>
                     <label>
                         <input type="checkbox" id="characterUseTeleport" name="characterUseTeleport" {{ if .Config.Character.UseTeleport }}checked{{ end }}/>Use teleport when available
@@ -443,20 +923,55 @@
                         Always stash to shared tab
                     </label>
                 </fieldset>
-                <fieldset class="grid">
+                <fieldset class="grid general-settings-grid">
                     <label>
-                        <input type="checkbox" name="useCentralizedPickit" {{ if .Config.UseCentralizedPickit }}checked{{ end }}/>
-                        Use centralized pickit
+                        <input type="checkbox" id="game.disableIdentifyTome" name="game.disableIdentifyTome" {{ if .Config.Game.DisableIdentifyTome }}checked{{ end }}/>
+                        Dont Buy ID Tome
                     </label>
                     <label>
                         <input type="checkbox" name="interactWithShrines" {{ if .Config.Game.InteractWithShrines }}checked{{ end }}/>
                         Interact with shrines
                     </label>
+                    <div class="chest-toggle-group">
+                        <div class="chest-toggle-title">Chests</div>
+                        <label class="chest-toggle-option">
+                            <input type="checkbox" id="interactWithChests" name="interactWithChests" {{ if .Config.Game.InteractWithChests }}checked{{ end }}/>
+                            All chests
+                        </label>
+                        <label class="chest-toggle-option">
+                            <input type="checkbox" id="interactWithSuperChests" name="interactWithSuperChests" {{ if .Config.Game.InteractWithSuperChests }}checked{{ end }}/>
+                            Super chests only
+                        </label>
+                    </div>
                     <label>
-                        <input type="checkbox" name="interactWithChests" {{ if .Config.Game.InteractWithChests }}checked{{ end }}/>
-                        Interact with chests
+                        <input type="checkbox" name="useCentralizedPickit" {{ if .Config.UseCentralizedPickit }}checked{{ end }}/>
+                        Use centralized pickit
                     </label>
                 </fieldset>
+                <div class="extra-buffs-toggle-row">
+                    <label class="extra-buffs-toggle-label">
+                        <span>Enable extra buff features</span>
+                        <input type="checkbox" id="characterUseExtraBuffs" name="characterUseExtraBuffs" {{ if .Config.Character.UseExtraBuffs }}checked{{ end }}/>
+                    </label>
+                    <small><i class="bi bi-info-circle" aria-hidden="true"></i> Enables and shows additional buff options used in all runs.</small>
+                </div>
+                <div id="useExtraBuffsDistContainer" class="conditional-field extra-buffs-container {{ if not .Config.Character.UseExtraBuffs }}is-hidden{{ end }}">
+                    <div>
+                        <label>
+                            <input type="checkbox" id="characterBuffOnNewArea" name="characterBuffOnNewArea" {{ if .Config.Character.BuffOnNewArea }}checked{{ end }}/>
+                            <span title="If true, bot will apply buffs when entering a new area">Buff after entering areas</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="characterBuffAfterWP" name="characterBuffAfterWP" {{ if .Config.Character.BuffAfterWP }}checked{{ end }}/>
+                            <span title="If true, bot will apply buffs after using a waypoint">Buff after taking WP</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="useSwapForBuffs" name="useSwapForBuffs" {{ if .Config.Character.UseSwapForBuffs }}checked{{ end }}>
+                            <span title="If true, swap to offhand (CTA / buff weapon) before class buffs.">ClassBuffs from SwapHand</span>
+                        </label>
+                        <hr/>
+                    </div>
+                </div>
                 <fieldset class="grid">
                     <label>
                         Level until (put 0 for no limit)
@@ -465,16 +980,6 @@
                     <label>
                         Minimum Gold (will pick up Magic+ to sell for gold if below)
                         <input min="0" type="number" name="gameMinGoldPickupThreshold" placeholder="{{ .Config.Game.MinGoldPickupThreshold }}" value="{{ .Config.Game.MinGoldPickupThreshold }}"/>
-                    </label>
-                </fieldset>
-                <fieldset class="grid">
-                    <label>
-                        <input type="checkbox" name="useCainIdentify" {{ if .Config.Game.UseCainIdentify }}checked{{ end }}/>
-                        Identify with Cain (forced for levelers)
-                        <span style="margin-left: 16px;">
-                            <input type="checkbox" id="game.disableIdentifyTome" name="game.disableIdentifyTome" {{ if .Config.Game.DisableIdentifyTome }}checked{{ end }}/>
-                            Dont Buy ID Tome
-                        </span>
                     </label>
                 </fieldset>
                 <div id="clearPathDistContainer" class="conditional-field" {{ if .Config.Character.UseTeleport }}style="display: none;"{{ end }}>
@@ -494,22 +999,15 @@
                     <strong>Mouse clicking is generally safer</strong> and less detectable.
                     Enable packet usage only if you understand the risks. Disabled by default.
                 </p>
-                <fieldset class="grid">
+                <fieldset class="grid packet-settings-grid">
                     <label>
                         <input type="checkbox" name="packetCastingUseForItemPickup" {{ if .Config.PacketCasting.UseForItemPickup }}checked{{ end }}/>
                         Use packets for item pickup
                     </label>
-                </fieldset>
-                <fieldset class="grid">
                     <label>
                         <input type="checkbox" name="packetCastingUseForTpInteraction" {{ if .Config.PacketCasting.UseForTpInteraction }}checked{{ end }}/>
                         Use packets for TP interaction
                     </label>
-                    <label style="visibility: hidden;">
-                        <!-- Spacer for grid alignment -->
-                    </label>
-                </fieldset>
-                <fieldset class="grid">
                     <label>
                         <input type="checkbox" name="packetCastingUseForEntranceInteraction" {{ if .Config.PacketCasting.UseForEntranceInteraction }}checked{{ end }}/>
                         Use packets for entrance interaction
@@ -522,8 +1020,6 @@
                         <input type="checkbox" name="packetCastingUseForEntitySkills" {{ if .Config.PacketCasting.UseForEntitySkills }}checked{{ end }}/>
                         Use packets for attacks and skills
                     </label>
-                </fieldset>
-                <fieldset class="grid">
                     <label>
                         <input type="checkbox" name="packetCastingUseForSkillSelection" {{ if .Config.PacketCasting.UseForSkillSelection }}checked{{ end }}/>
                         Use packets for skill selection
@@ -531,29 +1027,7 @@
                 </fieldset>
             </article>
 
-            <fieldset class="grid">
-                <label style="width: auto;">
-                    <div id="useExtraBuffsDistContainer" class="conditional-field" {{ if .Config.Character.UseExtraBuffs }}style="display: none;"{{ end }}>
-                        <div class="walking-radius-container">
-                            <label>Extra buffs</label>
-                        </div>
-                        <div>
-                            <label>
-                                <input type="checkbox" id="characterBuffOnNewArea" name="characterBuffOnNewArea" {{ if .Config.Character.BuffOnNewArea }}checked{{ end }}/>Buff after entering areas
-                            </label>
-                            <label>
-                                <input type="checkbox" id="characterBuffAfterWP" name="characterBuffAfterWP" {{ if .Config.Character.BuffAfterWP }}checked{{ end }}/>Buff after taking WP
-                            </label>
-                            <label>
-                                <input type="checkbox" id="useSwapForBuffs" name="useSwapForBuffs" {{ if .Config.Character.UseSwapForBuffs }}checked{{ end }}>ClassBuffs from SwapHand
-                            </label>
-                            <hr/>
-                            <div class="input-info">Enable additional buffing for all runs.</div>
-                        </div>
-                    </div>
-                </label>
-            </fieldset>
-            <h3>Client Settings</h3><br>
+            <h3 id="client-settings"><i class="bi bi-window section-icon" aria-hidden="true"></i>Client Settings</h3><br>
             <fieldset class="grid">
                 <label>
                     Client launch options (arguments)
@@ -570,16 +1044,12 @@
                     Use Classic Mode (Legacy Graphics)
                 </label>
                 <label>
-                    <input id="close_mini_panel" type="checkbox" name="close_mini_panel" {{ if .Config.CloseMiniPanel }}checked{{ end }}/>
-                    Close the mini panel at game start (Legacy Graphics)
-                </label>
-                <label>
                     <input id="hide_portraits" type="checkbox" name="hide_portraits" {{ if .Config.HidePortraits }}checked{{ end }}/>
                     Hide Portraits
                 </label>
             </fieldset>
-            <h3>Battle.net settings</h3><br>
-            <fieldset class="grid">
+            <h3 id="battle-net-settings"><i class="bi bi-globe2 section-icon" aria-hidden="true"></i>Battle.net settings</h3><br>
+            <fieldset class="grid" style="margin-bottom: 0;">
                 <label>
                     Username
                     <input name="username" placeholder="{{ .Config.Username }}" value="{{ .Config.Username }}"/>
@@ -606,42 +1076,387 @@
                 </label>
             </fieldset>
             <fieldset class="grid">
-                <label>
-                    Authentication Token
-                    <input type="password" name="AuthToken" placeholder="{{ .Config.AuthToken }}" value="{{ .Config.AuthToken }}"/>
+                <label style="grid-column: 1 / -1;">
+                    Authentication Token <small style="margin-left: 6px; margin-bottom: 4px; display: inline-block;">(Tokens are now valid for 1 year. Click Generate to auto-create.)</small>
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+                        <div style="position: relative; flex: 1;">
+                            <input type="password"
+                                   id="authTokenField"
+                                   name="AuthToken"
+                                   placeholder="{{ .Config.AuthToken }}"
+                                   value="{{ .Config.AuthToken }}"
+                                   style="width: 100%; margin-bottom: 0; padding-right: 38px;"/>
+                            <button type="button"
+                                    id="toggleTokenVisibility"
+                                    aria-label="Show token"
+                                    aria-pressed="false"
+                                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); padding: 0; border: none; background: transparent; color: var(--text-secondary); cursor: pointer;">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                                <button type="button"
+                                        id="generateTokenBtn"
+                                        onclick="generateBattleNetToken()"
+                                        style="white-space: nowrap; min-width: 140px; margin-bottom: 0;">
+                            Generate Token
+                        </button>
+                    </div>
+                    <small id="tokenStatus" style="color: #666; display: block; margin-top: 5px;"></small>
+                </label>
+                <label id="clearCredentialsOption" style="display: flex; align-items: center; gap: 6px; margin-top: -16px; grid-column: 1 / -1;">
+                    <input type="checkbox" id="clearCredentialsOnToken" name="clearCredentialsOnToken"/>
+                    <small style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">Clear username/password after successful token generation</small>
                 </label>
             </fieldset>
-            <h3>Scheduler</h3><br>
-            <label>Set the time ranges when the bot should Start and Stop automatically. Multiple time ranges can be set for the same day if you want to simulate breaks. This will enforce killing of the game client on Stop.</label><br>
+            <script>
+            const authMethodSelect = document.querySelector('select[name="authmethod"]');
+            const tokenButton = document.getElementById('generateTokenBtn');
+            const tokenField = document.getElementById('authTokenField');
+            const tokenVisibilityBtn = document.getElementById('toggleTokenVisibility');
+            const tokenVisibilityIcon = tokenVisibilityBtn ? tokenVisibilityBtn.querySelector('i') : null;
+            const clearCredentialsOption = document.getElementById('clearCredentialsOption');
+
+            function updateTokenButtonState() {
+                if (!authMethodSelect || !tokenButton) {
+                    return;
+                }
+
+                const isTokenAuth = authMethodSelect.value === 'TokenAuth';
+                tokenButton.disabled = !isTokenAuth;
+                if (clearCredentialsOption) {
+                    clearCredentialsOption.style.display = isTokenAuth ? 'flex' : 'none';
+                }
+            }
+
+            if (authMethodSelect && tokenButton) {
+                authMethodSelect.addEventListener('change', updateTokenButtonState);
+                updateTokenButtonState();
+            }
+
+            if (tokenVisibilityBtn && tokenVisibilityIcon) {
+                tokenVisibilityBtn.addEventListener('click', function () {
+                    if (!tokenField) {
+                        return;
+                    }
+                    const isMasked = tokenField.type === 'password';
+                    tokenField.type = isMasked ? 'text' : 'password';
+                    tokenVisibilityBtn.setAttribute('aria-pressed', isMasked ? 'true' : 'false');
+                    tokenVisibilityBtn.setAttribute('aria-label', isMasked ? 'Hide token' : 'Show token');
+                    tokenVisibilityIcon.className = isMasked ? 'bi bi-eye-slash' : 'bi bi-eye';
+                });
+            }
+
+            async function generateBattleNetToken() {
+                const btn = document.getElementById('generateTokenBtn');
+                const status = document.getElementById('tokenStatus');
+                const cleanLogLine = (line) => line.replace(/^\[(DEBUG|INFO)(?:[^\]]*)\]\s*/, '');
+                const mapLogLine = (line) => {
+                    if (line.startsWith('Current URL:')) {
+                        return 'Waiting for token issuance...';
+                    }
+                    return line;
+                };
+
+                // Get username, password, and realm from the form
+                const username = document.querySelector('input[name="username"]').value;
+                const password = document.querySelector('input[name="password"]').value;
+                const realm = document.querySelector('select[name="realm"]').value;
+
+                // Validate input
+                if (!username || !password) {
+                    status.textContent = 'Error: Please enter username and password first';
+                    status.style.color = 'red';
+                    return;
+                }
+
+                // Disable button and show loading state
+                btn.disabled = true;
+                btn.textContent = 'Generating...';
+                status.textContent = 'Starting token generation...';
+                status.style.color = '#0066cc';
+
+                let token = '';
+                let errorMsg = '';
+
+                try {
+                    const response = await fetch('/api/generate-battlenet-token', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            username: username,
+                            password: password,
+                            realm: realm
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        status.textContent = 'Error: ' + (errorText || 'Failed to generate token');
+                        status.style.color = 'red';
+                        return;
+                    }
+
+                    if (!response.body) {
+                        const text = await response.text();
+                        const lines = text.split('\n');
+                        for (const rawLine of lines) {
+                            const line = rawLine.trim();
+                            if (!line) {
+                                continue;
+                            }
+                            if (line.startsWith('TOKEN:')) {
+                                token = line.slice('TOKEN:'.length).trim();
+                                continue;
+                            }
+                            if (line.startsWith('ERROR:')) {
+                                errorMsg = line.slice('ERROR:'.length).trim();
+                                break;
+                            }
+                            const cleanedLine = mapLogLine(cleanLogLine(line));
+                            if (!cleanedLine) {
+                                continue;
+                            }
+                            status.textContent = cleanedLine;
+                            status.style.color = '#0066cc';
+                        }
+                    } else {
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+
+                        while (true) {
+                            const {value, done} = await reader.read();
+                            if (done) {
+                                break;
+                            }
+
+                            buffer += decoder.decode(value, {stream: true});
+                            const lines = buffer.split('\n');
+                            buffer = lines.pop();
+
+                            for (const rawLine of lines) {
+                                const line = rawLine.trim();
+                                if (!line) {
+                                    continue;
+                                }
+                                if (line.startsWith('TOKEN:')) {
+                                    token = line.slice('TOKEN:'.length).trim();
+                                    continue;
+                                }
+                                if (line.startsWith('ERROR:')) {
+                                    errorMsg = line.slice('ERROR:'.length).trim();
+                                    status.textContent = 'Error: ' + errorMsg;
+                                    status.style.color = 'red';
+                                    await reader.cancel();
+                                    break;
+                                }
+                                const cleanedLine = mapLogLine(cleanLogLine(line));
+                                if (!cleanedLine) {
+                                    continue;
+                                }
+                                status.textContent = cleanedLine;
+                                status.style.color = '#0066cc';
+                            }
+
+                            if (errorMsg) {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (errorMsg) {
+                        status.textContent = 'Error: ' + errorMsg;
+                        status.style.color = 'red';
+                        return;
+                    }
+
+                    if (token) {
+                        tokenField.value = token;
+                        const clearCredentials = document.getElementById('clearCredentialsOnToken');
+                        if (clearCredentials && clearCredentials.checked) {
+                            document.querySelector('input[name="username"]').value = '';
+                            document.querySelector('input[name="password"]').value = '';
+                        }
+                        status.textContent = "Token generated successfully! Don't forget to Save below.";
+                        status.style.color = 'green';
+                    } else {
+                        status.textContent = 'Error: Failed to generate token';
+                        status.style.color = 'red';
+                    }
+                } catch (error) {
+                    status.textContent = 'Error: ' + error.message;
+                    status.style.color = 'red';
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Generate Token';
+                }
+            }
+            </script>
+            <h3 id="scheduler-section"><i class="bi bi-calendar-week section-icon" aria-hidden="true"></i>Scheduler</h3><br>
+            <label>Automate when the bot runs. Choose between Time Slots (specific hours) or Duration (human-like play patterns).</label><br>
             <fieldset class="grid">
                 <label>
                     Enabled
-                    <input type="checkbox" name="schedulerEnabled" {{ if .Config.Scheduler.Enabled }}checked{{ end }}/>
+                    <input type="checkbox" name="schedulerEnabled" id="schedulerEnabled" {{ if .Config.Scheduler.Enabled }}checked{{ end }}/>
                 </label>
             </fieldset>
             <div id="scheduler-settings" {{ if not .Config.Scheduler.Enabled }}style="display: none;"{{ end }}>
-                {{ range $dayIndex := seq 0 6 }}
-                <div class="scheduler-day">
-                    <h4>{{ index $.DayNames $dayIndex }}</h4>
-                    <div class="time-ranges" data-day="{{ $dayIndex }}">
-                        {{ $day := index $.Config.Scheduler.Days $dayIndex }}
-                        {{ range $timeRange := $day.TimeRanges }}
-                        <div class="time-range">
-                            <input type="time" name="scheduler[{{ $dayIndex }}][start][]" value="{{ $timeRange.Start.Format "15:04" }}" required>
-                            <span>to</span>
-                            <input type="time" name="scheduler[{{ $dayIndex }}][end][]" value="{{ $timeRange.End.Format "15:04" }}" required>
-                            <button type="button" class="remove-time-range"><i class="bi bi-trash"></i></button>
-                        </div>
-                        {{ end }}
+                <!-- Mode Toggle -->
+                <fieldset class="grid">
+                    <label>
+                        Mode
+                        <select name="schedulerMode" id="schedulerMode">
+                            <option value="timeSlots" {{ if or (eq .Config.Scheduler.Mode "timeSlots") (eq .Config.Scheduler.Mode "") }}selected{{ end }}>Time Slots</option>
+                            <option value="duration" {{ if eq .Config.Scheduler.Mode "duration" }}selected{{ end }}>Duration (Human-like)</option>
+                        </select>
+                    </label>
+                </fieldset>
+
+                <!-- Time Slots Mode -->
+                <div id="timeSlotsMode" class="scheduler-mode-panel" {{ if eq .Config.Scheduler.Mode "duration" }}style="display: none;"{{ end }}>
+                    <div class="scheduler-toolbar">
+                        <fieldset class="grid">
+                            <label>
+                                Global Variance (+/- minutes)
+                                <input type="number" name="globalVarianceMin" value="{{ .Config.Scheduler.GlobalVarianceMin }}" min="0" max="120" step="5" placeholder="0"/>
+                            </label>
+                        </fieldset>
                     </div>
-                    <button type="button" class="add-time-range" data-day="{{ $dayIndex }}">
-                        <i class="bi bi-plus-circle"></i> Add Time Range
-                    </button>
+                    {{ range $dayIndex := seq 0 6 }}
+                    <details class="scheduler-day-details">
+                        <summary>
+                            <span class="day-name">{{ index $.DayNames $dayIndex }}</span>
+                            <span class="time-range-count" data-day="{{ $dayIndex }}">
+                                ({{ len (index $.Config.Scheduler.Days $dayIndex).TimeRanges }} ranges)
+                            </span>
+                        </summary>
+                        <div class="time-ranges" data-day="{{ $dayIndex }}">
+                            {{ $day := index $.Config.Scheduler.Days $dayIndex }}
+                            {{ range $timeRange := $day.TimeRanges }}
+                            <div class="time-range">
+                                <input type="time" name="scheduler[{{ $dayIndex }}][start][]" value="{{ $timeRange.Start.Format "15:04" }}" required>
+                                <span>to</span>
+                                <input type="time" name="scheduler[{{ $dayIndex }}][end][]" value="{{ $timeRange.End.Format "15:04" }}" required>
+                                <span>Var:</span>
+                                <input type="number" name="scheduler[{{ $dayIndex }}][startVar][]" value="{{ $timeRange.StartVarianceMin }}" min="0" max="60" step="5" placeholder="0" title="Start variance (+/- min)" style="width:60px;">
+                                <span>/</span>
+                                <input type="number" name="scheduler[{{ $dayIndex }}][endVar][]" value="{{ $timeRange.EndVarianceMin }}" min="0" max="60" step="5" placeholder="0" title="End variance (+/- min)" style="width:60px;">
+                                <button type="button" class="remove-time-range"><i class="bi bi-trash"></i></button>
+                            </div>
+                            {{ end }}
+                        </div>
+                        <button type="button" class="add-time-range" data-day="{{ $dayIndex }}">
+                            <i class="bi bi-plus-circle"></i> Add Time Range
+                        </button>
+                    </details>
+                    {{ end }}
                 </div>
-                {{ end }}
+
+                <!-- Duration Mode -->
+                <div id="durationMode" class="scheduler-mode-panel" {{ if ne .Config.Scheduler.Mode "duration" }}style="display: none;"{{ end }}>
+                    <p><strong>Duration Mode</strong> simulates realistic human play patterns with randomized wake times, breaks, and rest periods.</p>
+
+                    <fieldset>
+                        <legend>Wake Up</legend>
+                        <div class="grid">
+                            <label>
+                                Time
+                                <input type="time" name="durationWakeUpTime" value="{{ if .Config.Scheduler.Duration.WakeUpTime }}{{ .Config.Scheduler.Duration.WakeUpTime }}{{ else }}08:00{{ end }}"/>
+                            </label>
+                            <label>
+                                Variance (+/- min)
+                                <input type="number" name="durationWakeUpVariance" value="{{ .Config.Scheduler.Duration.WakeUpVariance }}" min="0" max="120" step="5" placeholder="30"/>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Play Session</legend>
+                        <div class="grid">
+                            <label>
+                                Duration (hours)
+                                <input type="number" name="durationPlayHours" value="{{ if .Config.Scheduler.Duration.PlayHours }}{{ .Config.Scheduler.Duration.PlayHours }}{{ else }}14{{ end }}" min="1" max="23" step="1"/>
+                            </label>
+                            <label>
+                                Variance (+/- hours)
+                                <input type="number" name="durationPlayHoursVariance" value="{{ .Config.Scheduler.Duration.PlayHoursVariance }}" min="0" max="6" step="1" placeholder="2"/>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Meal Breaks (lunch/dinner)</legend>
+                        <div class="grid">
+                            <label>
+                                Count
+                                <input type="number" name="durationMealBreakCount" value="{{ if .Config.Scheduler.Duration.MealBreakCount }}{{ .Config.Scheduler.Duration.MealBreakCount }}{{ else }}2{{ end }}" min="0" max="4" step="1"/>
+                            </label>
+                            <label>
+                                Duration (min)
+                                <input type="number" name="durationMealBreakDuration" value="{{ if .Config.Scheduler.Duration.MealBreakDuration }}{{ .Config.Scheduler.Duration.MealBreakDuration }}{{ else }}30{{ end }}" min="5" max="90" step="5"/>
+                            </label>
+                            <label>
+                                Variance (+/- min)
+                                <input type="number" name="durationMealBreakVariance" value="{{ .Config.Scheduler.Duration.MealBreakVariance }}" min="0" max="30" step="5" placeholder="15"/>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Short Breaks (snack/water/bathroom)</legend>
+                        <div class="grid">
+                            <label>
+                                Count
+                                <input type="number" name="durationShortBreakCount" value="{{ if .Config.Scheduler.Duration.ShortBreakCount }}{{ .Config.Scheduler.Duration.ShortBreakCount }}{{ else }}3{{ end }}" min="0" max="8" step="1"/>
+                            </label>
+                            <label>
+                                Duration (min)
+                                <input type="number" name="durationShortBreakDuration" value="{{ if .Config.Scheduler.Duration.ShortBreakDuration }}{{ .Config.Scheduler.Duration.ShortBreakDuration }}{{ else }}8{{ end }}" min="1" max="30" step="1"/>
+                            </label>
+                            <label>
+                                Variance (+/- min)
+                                <input type="number" name="durationShortBreakVariance" value="{{ .Config.Scheduler.Duration.ShortBreakVariance }}" min="0" max="15" step="1" placeholder="5"/>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Break Timing</legend>
+                        <div class="grid">
+                            <label>
+                                When breaks start (+/- min)
+                                <input type="number" name="durationBreakTimingVariance" value="{{ .Config.Scheduler.Duration.BreakTimingVariance }}" min="0" max="60" step="5" placeholder="30"/>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Jitter (variance variability)</legend>
+                        <p style="font-size:0.85em;color:var(--text-secondary);margin-top:0;">Makes variance itself unpredictable. Each roll picks a random multiplier in this range.</p>
+                        <div class="grid">
+                            <label>
+                                Min %
+                                <input type="number" name="durationJitterMin" value="{{ if .Config.Scheduler.Duration.JitterMin }}{{ .Config.Scheduler.Duration.JitterMin }}{{ else }}50{{ end }}" min="0" max="100" step="10" placeholder="50"/>
+                            </label>
+                            <label>
+                                Max %
+                                <input type="number" name="durationJitterMax" value="{{ if .Config.Scheduler.Duration.JitterMax }}{{ .Config.Scheduler.Duration.JitterMax }}{{ else }}150{{ end }}" min="100" max="300" step="10" placeholder="150"/>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                </div>
+
+                <!-- Scheduler History Panel -->
+                <details class="scheduler-history-panel" id="schedulerHistoryPanel">
+                    <summary><strong>Play History (Last 30 Days)</strong></summary>
+                    <div id="schedulerHistoryContent">
+                        <div class="history-loading">Loading history...</div>
+                    </div>
+                </details>
             </div>
             <div style="display:flex; align-items:center; gap:0.5rem;">
-                <h3 style="margin:0">Health settings</h3>
+                <h3 id="health-settings" style="margin:0"><i class="bi bi-heart section-icon" aria-hidden="true"></i>Health settings</h3>
             </div>
             <br>
 
@@ -701,30 +1516,30 @@
                     </div>
                 </div>
             </div>
-            <fieldset class="grid">
+            <fieldset class="grid health-settings-grid">
                 <label>
-                    Healing at (%)
+                    <span class="label-text">Healing at (%)</span>
                     <input type="number" name="healingPotionAt" min="0" max="99" placeholder="{{ .Config.Health.HealingPotionAt }}" value="{{ .Config.Health.HealingPotionAt }}"/>
                 </label>
                 <label>
-                    Mana at (%)
+                    <span class="label-text">Mana at (%)</span>
                     <input type="number" name="manaPotionAt" min="0" max="99" placeholder="{{ .Config.Health.ManaPotionAt }}" value="{{ .Config.Health.ManaPotionAt }}"/>
                 </label>
                 <label>
-                    Rejuv at (% of life)
+                    <span class="label-text">Rejuv at (% of life)</span>
                     <input type="number" name="rejuvPotionAtLife" min="0" max="99" placeholder="{{ .Config.Health.RejuvPotionAtLife }}" value="{{ .Config.Health.RejuvPotionAtLife }}"/>
                 </label>
                 <label>
-                    Rejuv at (% of mana)
+                    <span class="label-text">Rejuv at (% of mana)</span>
                     <input type="number" name="rejuvPotionAtMana" min="0" max="99" placeholder="{{ .Config.Health.RejuvPotionAtMana }}" value="{{ .Config.Health.RejuvPotionAtMana }}"/>
                 </label>
                 <label>
-                    Chicken at (%)
+                    <span class="label-text">Chicken at (%)</span>
                     <input type="number" name="chickenAt" min="0" max="99" placeholder="{{ .Config.Health.ChickenAt }}"
                            value="{{ .Config.Health.ChickenAt }}"/>
                 </label>
                 <label>
-                    Town Chicken at (%)
+                    <span class="label-text">Town Chicken at (%)</span>
                     <input type="number" name="townChickenAt" min="0" max="99" placeholder="{{ .Config.Health.TownChickenAt }}"
                            value="{{ .Config.Health.TownChickenAt }}"/>
                 </label>
@@ -757,7 +1572,57 @@
                     <input type="number" name="rejuvPotionCount" min="0" max="99" placeholder="{{ .Config.Inventory.RejuvPotionCount }}" value="{{ .Config.Inventory.RejuvPotionCount }}"/>
                 </label>
             </fieldset>
-            <h3>Merc Settings</h3><br>
+            <h3 id="chicken-curses-auras"><i class="bi bi-exclamation-triangle section-icon" aria-hidden="true"></i>Chicken on Curses/Auras</h3>            <h4>Curses (on player)</h4>
+            <fieldset class="grid">
+                <label>
+                    <input type="checkbox" name="chickenAmplifyDamage" {{ if .Config.ChickenOnCurses.AmplifyDamage }}checked{{ end }}/>
+                    Amplify Damage
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenDecrepify" {{ if .Config.ChickenOnCurses.Decrepify }}checked{{ end }}/>
+                    Decrepify
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenLowerResist" {{ if .Config.ChickenOnCurses.LowerResist }}checked{{ end }}/>
+                    Lower Resist
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenBloodMana" {{ if .Config.ChickenOnCurses.BloodMana }}checked{{ end }}/>
+                    Blood Mana
+                </label>
+            </fieldset>
+            <h4>Auras (on nearby monsters)</h4>
+            <fieldset class="grid">
+                <label>
+                    <input type="checkbox" name="chickenFanaticism" {{ if .Config.ChickenOnAuras.Fanaticism }}checked{{ end }}/>
+                    Fanaticism
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenMight" {{ if .Config.ChickenOnAuras.Might }}checked{{ end }}/>
+                    Might
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenConviction" {{ if .Config.ChickenOnAuras.Conviction }}checked{{ end }}/>
+                    Conviction
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenHolyFire" {{ if .Config.ChickenOnAuras.HolyFire }}checked{{ end }}/>
+                    Holy Fire
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenBlessedAim" {{ if .Config.ChickenOnAuras.BlessedAim }}checked{{ end }}/>
+                    Blessed Aim
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenHolyFreeze" {{ if .Config.ChickenOnAuras.HolyFreeze }}checked{{ end }}/>
+                    Holy Freeze
+                </label>
+                <label>
+                    <input type="checkbox" name="chickenHolyShock" {{ if .Config.ChickenOnAuras.HolyShock }}checked{{ end }}/>
+                    Holy Shock
+                </label>
+            </fieldset>
+            <h3 id="merc-settings"><i class="bi bi-person-badge section-icon" aria-hidden="true"></i>Merc Settings</h3><br>
             <label>
                 <input id="use_merc" type="checkbox" name="useMerc" {{ if .Config.Character.UseMerc }}checked{{ end }}/>
                 Use merc
@@ -776,8 +1641,18 @@
                     <input type="number" min="0" max="99" name="mercChickenAt" placeholder="{{ .Config.Health.MercChickenAt }}" value="{{ .Config.Health.MercChickenAt }}"/>
                 </label>
             </fieldset>
-            <h3>Inventory (Checked means locked)</h3>
+            <h3 id="inventory-settings"><i class="bi bi-grid-3x3-gap section-icon" aria-hidden="true"></i>Inventory (Checked means locked)</h3>
             <table>
+                {{ $firstRow := index .Config.Inventory.InventoryLock 0 }}
+                <tr>
+                    {{ range $columnIndex, $unlocked := $firstRow }}
+                    <td>
+                        <button type="button" class="col-lock-btn" data-col="{{ $columnIndex }}" title="Lock/unlock entire column">
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+                    </td>
+                    {{ end }}
+                </tr>
                 {{ range $rowIndex, $row := .Config.Inventory.InventoryLock }}
                 <tr>
                     {{ range $columnIndex, $unlocked := $row }}
@@ -788,7 +1663,7 @@
                 </tr>
                 {{ end }}
             </table>
-            <h3>Game Settings</h3><br>
+            <h3 id="game-settings"><i class="bi bi-controller section-icon" aria-hidden="true"></i>Game Settings</h3><br>
             <label>
                 <input type="checkbox" name="createLobbyGames" {{ if .Config.Game.CreateLobbyGames }}checked{{ end }}/>
                 Create Lobby Games
@@ -817,15 +1692,26 @@
                     <input name="maxGameLength" min="50" type="number" placeholder="{{ .Config.MaxGameLength }}" value="{{ .Config.MaxGameLength }}"/>
                 </label>
             </fieldset>
-            <h3>Companion System</h3><br>
+            <h3 id="companion-settings"><i class="bi bi-people section-icon" aria-hidden="true"></i>Companion System</h3><br>
             <label>
                 <input type="checkbox" name="companionLeader" id="companionLeader" {{ if .Config.Companion.Leader }}checked{{ end }}/>
                 Open tp for manual player
             </label>
-            <h4>Run Settings</h4><br>
+            <h3 id="run-settings"><i class="bi bi-play-circle section-icon" aria-hidden="true"></i>Run Settings</h3><br>
             <label>
                 Choose the runs that you want the bot to run. You can either drag & drop runs below to enable or disable them, or use the + - buttons. Click on any of the runs to expand them and see more details and options.
             </label><br>
+            <div class="run-filter-tabs" role="tablist" aria-label="Run filters">
+                <button type="button" class="run-filter-tab active" data-run-filter="all">All</button>
+                <button type="button" class="run-filter-tab" data-run-filter="favorite">Favorites</button>
+                <button type="button" class="run-filter-tab" data-run-filter="leveling">Leveling</button>
+                <button type="button" class="run-filter-tab" data-run-filter="act-boss">Act Boss</button>
+                <button type="button" class="run-filter-tab" data-run-filter="super-unique">S.Unique</button>
+                <button type="button" class="run-filter-tab" data-run-filter="a85">A85</button>
+                <button type="button" class="run-filter-tab" data-run-filter="key">Key</button>
+                <button type="button" class="run-filter-tab" data-run-filter="special">Special</button>
+                <button type="button" class="run-filter-tab" data-run-filter="other">Utils</button>
+            </div>
             <label>
                 <input type="checkbox" name="gameRandomizeRuns" {{ if .Config.Game.RandomizeRuns }}checked{{ end }}/>
                 Randomize run order
@@ -837,9 +1723,15 @@
                     <ul style="padding-top: 52px" class="run-list" id="enabled_runs">
                         {{ range $index, $run := .EnabledRuns }}
                         {{ if or (eq $topLevelContext.Version "dev") (ne $run "development") }}
-                        <li value="{{ $run }}">
+                        <li value="{{ $run }}" data-favorite="{{ if contains $topLevelContext.RunFavoriteRuns $run }}1{{ else }}0{{ end }}">
+                            {{ if contains $topLevelContext.RunFavoriteRuns $run }}
+                            <input type="hidden" class="run-fav-input" name="runFavoriteRuns" value="{{ $run }}" />
+                            {{ end }}
                             <details>
                                 <summary role="button" class="outline secondary">
+                                    <button type="button" class="run-fav-btn {{ if contains $topLevelContext.RunFavoriteRuns $run }}active{{ end }}" title="Favorite run" aria-label="Favorite run">
+                                        <i class="bi {{ if contains $topLevelContext.RunFavoriteRuns $run }}bi-star-fill{{ else }}bi-star{{ end }}"></i>
+                                    </button>
                                     <span>{{ runDisplayName $run }}</span>
                                     <button type="button" class="remove-run" title="Remove run"><i class="bi bi-dash"></i></button>
                                 </summary>
@@ -856,9 +1748,15 @@
                     <ul class="run-list" id="disabled_runs">
                         {{ range $index, $run := .DisabledRuns }}
                         {{ if or (eq $topLevelContext.Version "dev") (ne $run "development") }}
-                        <li value="{{ $run }}">
+                        <li value="{{ $run }}" data-favorite="{{ if contains $topLevelContext.RunFavoriteRuns $run }}1{{ else }}0{{ end }}">
+                            {{ if contains $topLevelContext.RunFavoriteRuns $run }}
+                            <input type="hidden" class="run-fav-input" name="runFavoriteRuns" value="{{ $run }}" />
+                            {{ end }}
                             <details>
                                 <summary role="button" class="outline secondary">
+                                    <button type="button" class="run-fav-btn {{ if contains $topLevelContext.RunFavoriteRuns $run }}active{{ end }}" title="Favorite run" aria-label="Favorite run">
+                                        <i class="bi {{ if contains $topLevelContext.RunFavoriteRuns $run }}bi-star-fill{{ else }}bi-star{{ end }}"></i>
+                                    </button>
                                     <span>{{ runDisplayName $run }}</span>
                                     <button type="button" class="add-run" title="Add run"><i class="bi bi-plus"></i></button>
                                 </summary>
@@ -870,12 +1768,17 @@
                     </ul>
                 </div>
             </div>
-            <h3>Gambling</h3>
+            <h3 id="gambling-settings"><i class="bi bi-cash-coin section-icon" aria-hidden="true"></i>Gambling</h3>
             <label>
                 <input type="checkbox" name="gamblingEnabled" {{ if .Config.Gambling.Enabled }}checked{{ end }}/>
                 Enabled
             </label>
-            <h3>Muling</h3>
+            <label>
+                Items to gamble (comma-separated):
+                <input type="text" name="gamblingItems" value="{{ range $i, $v := .Config.Gambling.Items }}{{ if gt $i 0 }}, {{ end }}{{$v}}{{ end }}" placeholder="coronet, circlet, amulet"/>
+                <small>Example: coronet, circlet, amulet</small>
+            </label>
+            <h3 id="muling-settings"><i class="bi bi-box-seam section-icon" aria-hidden="true"></i>Muling</h3>
             <p>Configure automatic muling to transfer items from this character to mule characters. Items will be moved from shared stash tabs (2-4) to the mule's private stash (tab 1).</p>
             <label>
                 <input type="checkbox" name="mulingEnabled" id="mulingEnabled" {{ if .Config.Muling.Enabled }}checked{{ end }}/>
@@ -979,7 +1882,7 @@
                     });
                 });
             </script>
-            <h3>Runeword Maker</h3>
+            <h3 id="runeword-settings"><i class="bi bi-gem section-icon" aria-hidden="true"></i>Runeword Maker</h3>
             <div style="margin-left: 20px; margin-bottom: 20px;">
                 <p style="font-size: 0.9em; color: #aaa; margin-bottom: 10px;">
                     Configure runeword maker and reroll options on the dedicated Runeword Settings page.
@@ -1013,19 +1916,23 @@
                     });
                 })();
             </script>
-            <h3>Cube Recipes</h3>
-            <label>
-                <input type="checkbox" style="padding-right: 30px" name="enableCubeRecipes" {{ if .Config.CubeRecipes.Enabled }}checked{{ end }}/>
-                Enable the bot to automatically cube item recipes.
-            </label><br>
-            <label>
-                <input type="checkbox" name="skipPerfectAmethysts" {{ if .Config.CubeRecipes.SkipPerfectAmethysts }}checked{{ end }}/>
-                Don't use Perfect Amethysts when rolling charms
-            </label><br>
-            <label>
-                <input type="checkbox" name="skipPerfectRubies" {{ if .Config.CubeRecipes.SkipPerfectRubies }}checked{{ end }}/>
-                Don't use Perfect Rubies when rolling charms
-            </label><br>
+            <h3 id="cube-recipes"><i class="bi bi-box section-icon" aria-hidden="true"></i>Cube Recipes</h3>
+            <div class="cube-options">
+                <label class="cube-option-item">
+                    <input type="checkbox" style="padding-right: 30px" name="enableCubeRecipes" {{ if .Config.CubeRecipes.Enabled }}checked{{ end }}/>
+                    Enable the bot to automatically cube item recipes.
+                </label>
+                <fieldset class="grid">
+                    <label class="cube-option-item">
+                        <input type="checkbox" name="skipPerfectAmethysts" {{ if .Config.CubeRecipes.SkipPerfectAmethysts }}checked{{ end }}/>
+                        Don't use Perfect Amethysts when rolling charms
+                    </label>
+                    <label class="cube-option-item">
+                        <input type="checkbox" name="skipPerfectRubies" {{ if .Config.CubeRecipes.SkipPerfectRubies }}checked{{ end }}/>
+                        Don't use Perfect Rubies when rolling charms
+                    </label>
+                </fieldset>
+            </div>
             <div class="recipe-grid">
                 {{ range $index, $recipe := .RecipeList }}
                 <label>
@@ -1034,14 +1941,12 @@
                 </label>
                 {{ end }}
             </div>
-            <!-- New field: Jewels to keep -->
             <label>
-                Jewels to keep:
+                Jewels to keep in stash for crafting:
                 <input type="number" name="jewelsToKeep" min="1"
                     value="{{ .Config.CubeRecipes.JewelsToKeep }}" />
-                <small>Number of magic jewels to stash for crafting</small>
             </label>
-            <h3>Back to Town Settings:</h3>
+            <h3 id="back-to-town-settings"><i class="bi bi-house-door section-icon" aria-hidden="true"></i>Back to Town Settings:</h3>
             <fieldset class="grid">
                 <label>
                     <input id="no_hp_potions" type="checkbox" name="noHpPotions" {{ if .Config.BackToTown.NoHpPotions }}checked{{ end }}/>
@@ -1073,6 +1978,43 @@
             </fieldset>
         </form>
     </div>
+        </div>
+    </div>
 </main>
+<script>
+function validateCharacterName(input) {
+    const original = input.value || "";
+    let cleaned = original.replace(/[0-9]/g, "");
+    if (cleaned.length > 15) {
+        cleaned = cleaned.slice(0, 15);
+    }
+
+    const hasLatin = /[A-Za-z]/.test(cleaned);
+    const hasHangul = /[가-힣]/.test(cleaned);
+    const hasHan = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/.test(cleaned);
+    const scriptCount = (hasLatin ? 1 : 0) + (hasHangul ? 1 : 0) + (hasHan ? 1 : 0);
+    const hyphenCount = (cleaned.match(/-/g) || []).length;
+    const underscoreCount = (cleaned.match(/_/g) || []).length;
+
+    if (scriptCount > 1 || hyphenCount + underscoreCount > 1) {
+        input.value = input.dataset.lastValid || "";
+        return;
+    }
+
+    input.value = cleaned;
+    input.dataset.lastValid = input.value;
+}
+
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.col-lock-btn');
+    if (!btn) return;
+    const col = +btn.dataset.col;
+    const checkboxes = [...btn.closest('table').querySelectorAll('tr:not(:first-child)')]
+        .map(tr => tr.cells[col]?.querySelector('input[type="checkbox"]'))
+        .filter(Boolean);
+    const allChecked = checkboxes.every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+});
+</script>
 </body>
 </html>

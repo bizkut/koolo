@@ -84,15 +84,20 @@ func PreRun(firstRun bool) error {
 		}
 	}
 
-	DropMouseItem()
+	DropAndRecoverCursorItem()
 	step.SetSkill(skill.Vigor)
 	RecoverCorpse()
 	ManageBelt()
 	// Just to make sure messages like TZ change or public game spam arent on the way
 	ClearMessages()
 	RefillBeltFromInventory()
-	_, isLevelingChar := ctx.Char.(context.LevelingCharacter)
 
+	// barb shield remove under 31
+	if firstRun {
+		RemoveShield()
+	}
+
+	_, isLevelingChar := ctx.Char.(context.LevelingCharacter)
 	if firstRun && !isLevelingChar {
 		Stash(false)
 	}
@@ -115,7 +120,7 @@ func PreRun(firstRun bool) error {
 	Stash(false)
 
 	// Refill pots, sell, buy etc
-	VendorRefill(false, true)
+	VendorRefill(VendorRefillOpts{SellJunk: true, BuyConsumables: true})
 
 	// Gamble
 	Gamble()
@@ -141,15 +146,28 @@ func PreRun(firstRun bool) error {
 	// so we don't carry them out to the next area unnecessarily.
 	Stash(false)
 
+	if ctx.CharacterCfg.Game.Leveling.AutoEquip && isLevelingChar {
+		AutoEquip()
+	}
+
 	if isLevelingChar {
 		OptimizeInventory(item.LocationInventory)
 	}
 
 	// Leveling related checks
-	if ctx.CharacterCfg.Game.Leveling.EnsurePointsAllocation {
+	if ctx.CharacterCfg.Game.Leveling.EnsurePointsAllocation && isLevelingChar {
 		ResetStats()
 		EnsureStatPoints()
 		EnsureSkillPoints()
+	} else if !isLevelingChar && ctx.CharacterCfg.Character.AutoStatSkill.Enabled {
+		AutoRespecIfNeeded()
+		EnsureStatPoints()
+		if !shouldDeferAutoSkillsForStats() {
+			EnsureSkillPoints()
+			EnsureSkillBindings()
+		} else {
+			ctx.Logger.Debug("Auto stat targets pending; skipping skill allocation for now.")
+		}
 	}
 
 	if ctx.CharacterCfg.Game.Leveling.EnsureKeyBinding {
@@ -160,7 +178,7 @@ func PreRun(firstRun bool) error {
 	ReviveMerc()
 	HireMerc()
 
-	return Repair()
+	return RepairTownRoutine()
 }
 
 func InRunReturnTownRoutine() error {
@@ -199,7 +217,7 @@ func InRunReturnTownRoutine() error {
 		ctx.PauseIfNotPriority() // Check after AutoEquip
 	}
 
-	VendorRefill(false, true)
+	VendorRefill(VendorRefillOpts{SellJunk: true, BuyConsumables: true})
 	ctx.PauseIfNotPriority() // Check after VendorRefill
 	Stash(false)
 	ctx.PauseIfNotPriority() // Check after Stash
@@ -235,11 +253,29 @@ func InRunReturnTownRoutine() error {
 	Stash(false)
 	ctx.PauseIfNotPriority() // Check after post-reroll Stash
 
-	if ctx.CharacterCfg.Game.Leveling.EnsurePointsAllocation {
+	if ctx.CharacterCfg.Game.Leveling.AutoEquip && isLevelingChar {
+		AutoEquip()
+		ctx.PauseIfNotPriority() // Check after AutoEquip
+	}
+
+	if ctx.CharacterCfg.Game.Leveling.EnsurePointsAllocation && isLevelingChar {
 		EnsureStatPoints()
 		ctx.PauseIfNotPriority() // Check after EnsureStatPoints
 		EnsureSkillPoints()
 		ctx.PauseIfNotPriority() // Check after EnsureSkillPoints
+	} else if !isLevelingChar && ctx.CharacterCfg.Character.AutoStatSkill.Enabled {
+		AutoRespecIfNeeded()
+		ctx.PauseIfNotPriority() // Check after AutoRespecIfNeeded
+		EnsureStatPoints()
+		ctx.PauseIfNotPriority() // Check after EnsureStatPoints
+		if !shouldDeferAutoSkillsForStats() {
+			EnsureSkillPoints()
+			ctx.PauseIfNotPriority() // Check after EnsureSkillPoints
+			EnsureSkillBindings()
+			ctx.PauseIfNotPriority() // Check after EnsureSkillBindings
+		} else {
+			ctx.Logger.Debug("Auto stat targets pending; skipping skill allocation for now.")
+		}
 	}
 
 	if ctx.CharacterCfg.Game.Leveling.EnsureKeyBinding {
@@ -253,8 +289,10 @@ func InRunReturnTownRoutine() error {
 	ctx.PauseIfNotPriority() // Check after ReviveMerc
 	HireMerc()
 	ctx.PauseIfNotPriority() // Check after HireMerc
-	Repair()
-	ctx.PauseIfNotPriority() // Check after Repair
+	if err := RepairTownRoutine(); err != nil {
+		return err
+	}
+	ctx.PauseIfNotPriority() // Check after RepairTownRoutine
 
 	if ctx.CharacterCfg.Companion.Leader {
 		UsePortalInTown()

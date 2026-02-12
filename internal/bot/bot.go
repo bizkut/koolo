@@ -10,6 +10,7 @@ import (
 
 	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
+	"github.com/hectorgimenez/d2go/pkg/data/skill"
 	"github.com/hectorgimenez/d2go/pkg/data/stat"
 	"github.com/hectorgimenez/koolo/internal/action"
 	"github.com/hectorgimenez/koolo/internal/action/step"
@@ -19,8 +20,6 @@ import (
 	"github.com/hectorgimenez/koolo/internal/health"
 	"github.com/hectorgimenez/koolo/internal/run"
 	"github.com/hectorgimenez/koolo/internal/utils"
-
-	"github.com/hectorgimenez/d2go/pkg/data/skill"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -35,6 +34,27 @@ type Bot struct {
 
 func (b *Bot) NeedsTPsToContinue() bool {
 	return !action.HasTPsAvailable()
+}
+
+func (b *Bot) shouldReturnToTown(lvl int, needHealingPotionsRefill, needManaPotionsRefill, townChicken bool) bool {
+	if (b.ctx.Data.PlayerUnit.TotalPlayerGold() > 500 && lvl <= 5) ||
+		(b.ctx.Data.PlayerUnit.TotalPlayerGold() > 1000 && lvl < 20) ||
+		(b.ctx.Data.PlayerUnit.TotalPlayerGold() > 5000 && lvl >= 20) {
+		if (b.ctx.CharacterCfg.BackToTown.NoHpPotions && needHealingPotionsRefill ||
+			b.ctx.CharacterCfg.BackToTown.EquipmentBroken && action.IsEquipmentBroken() ||
+			b.ctx.CharacterCfg.BackToTown.NoMpPotions && needManaPotionsRefill ||
+			townChicken ||
+			b.ctx.CharacterCfg.BackToTown.MercDied &&
+				b.ctx.Data.MercHPPercent() <= 0 &&
+				b.ctx.CharacterCfg.Character.UseMerc &&
+				b.ctx.Data.PlayerUnit.TotalPlayerGold() > 100000) &&
+			!b.ctx.Data.PlayerUnit.Area.IsTown() &&
+			b.ctx.Data.PlayerUnit.Area != area.UberTristram {
+			return true
+		}
+	}
+
+	return false
 }
 
 func NewBot(ctx *botCtx.Context, mm MuleManager) *Bot {
@@ -138,6 +158,11 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 					continue
 				}
 
+				if !b.ctx.Manager.InGame() || b.ctx.Data.PlayerUnit.ID == 0 {
+					// Avoid false death/chicken checks while out of game or data is not yet valid.
+					continue
+				}
+
 				err = b.ctx.HealthManager.HandleHealthAndMana()
 				if err != nil {
 					b.ctx.Logger.Info("HealthManager: Detected critical error (chicken/death), stopping bot.", "error", err.Error())
@@ -185,6 +210,7 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 			}
 		}
 	})
+
 	// High priority loop, this will interrupt (pause) low priority loop
 	g.Go(func() error {
 		defer func() {
@@ -195,6 +221,7 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 
 		b.ctx.AttachRoutine(botCtx.PriorityHigh)
 		ticker := time.NewTicker(time.Millisecond * 100)
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -212,15 +239,13 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 				// Update activity for high-priority actions as they indicate bot is processing.
 				b.updateActivityAndPosition()
 
-				// Sometimes when we switch areas, monsters are not loaded yet, and we don't properly detect the Merc
-				// let's add some small delay (just few ms) when this happens, and recheck the merc status
+				// Merc check (Fast)
 				if b.ctx.CharacterCfg.BackToTown.MercDied && b.ctx.Data.MercHPPercent() <= 0 && b.ctx.CharacterCfg.Character.UseMerc {
 					time.Sleep(200 * time.Millisecond)
 				}
 
-				// extra RefreshGameData not needed for Legacygraphics/Portraits since Background loop will automatically refresh after 100ms
+				// Legacy/Portrait/Chat checks (Fast, Read-only/Input-gated)
 				if b.ctx.CharacterCfg.ClassicMode && !b.ctx.Data.LegacyGraphics {
-					// Toggle Legacy if enabled
 					action.SwitchToLegacyMode()
 					time.Sleep(150 * time.Millisecond)
 				}
@@ -234,34 +259,30 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 					b.ctx.HID.PressKey(b.ctx.Data.KeyBindings.Chat.Key1[0])
 					time.Sleep(150 * time.Millisecond)
 				}
-				b.ctx.SwitchPriority(botCtx.PriorityHigh)
 
-				// Area correction (only check if enabled)
-				if b.ctx.CurrentGame.AreaCorrection.Enabled {
-					if err = action.AreaCorrection(); err != nil {
-						b.ctx.Logger.Warn("Area correction failed", "error", err)
+				// Max Level Check (Fast, Read-only)
+				lvl, _ := b.ctx.Data.PlayerUnit.FindStat(stat.Level, 0)
+				MaxLevel := b.ctx.CharacterCfg.Game.StopLevelingAt
+				if lvl.Value >= MaxLevel && MaxLevel > 0 {
+					b.ctx.Logger.Info(fmt.Sprintf("Player reached level %d (>= MaxLevel %d). Triggering supervisor stop via context.", lvl.Value, MaxLevel), "run", "Leveling")
+					b.ctx.StopSupervisor()
+					return nil
+				}
+
+				// Check-Then-Lock Pattern
+				// We pre-calculate if we need to switch priority to High.
+				// This prevents locking the main thread (Low Priority Loop) when there is nothing to do.
+
+				shouldPickup := false
+				if b.ctx.CurrentGame.PickupItems {
+					// Peek if there are items without locking
+					if len(action.GetItemsToPickup(30)) > 0 {
+						shouldPickup = true
 					}
 				}
 
-				// Perform item pickup if enabled
-				if b.ctx.CurrentGame.PickupItems {
-					action.ItemPickup(30)
-				}
-				action.BuffIfRequired()
+				shouldBuff := action.IsRebuffRequired()
 
-				lvl, _ := b.ctx.Data.PlayerUnit.FindStat(stat.Level, 0)
-
-				MaxLevel := b.ctx.CharacterCfg.Game.StopLevelingAt
-
-				if lvl.Value >= MaxLevel && MaxLevel > 0 {
-					b.ctx.Logger.Info(fmt.Sprintf("Player reached level %d (>= MaxLevelAct1 %d). Triggering supervisor stop via context.", lvl.Value, MaxLevel), "run", "Leveling")
-					b.ctx.StopSupervisor()
-					return nil // Return nil to gracefully end the current run loop
-				}
-
-				isInTown := b.ctx.Data.PlayerUnit.Area.IsTown()
-
-				// Check potions in belt
 				_, healingPotionsFoundInBelt := b.ctx.Data.Inventory.Belt.GetFirstPotion(data.HealingPotion)
 				_, manaPotionsFoundInBelt := b.ctx.Data.Inventory.Belt.GetFirstPotion(data.ManaPotion)
 				_, rejuvPotionsFoundInBelt := b.ctx.Data.Inventory.Belt.GetFirstPotion(data.RejuvenationPotion)
@@ -271,7 +292,6 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 				hasManaPotionsInInventory := b.ctx.Data.HasPotionInInventory(data.ManaPotion)
 				hasRejuvPotionsInInventory := b.ctx.Data.HasPotionInInventory(data.RejuvenationPotion)
 
-				// Check if we actually need each type of potion
 				needHealingPotionsRefill := !healingPotionsFoundInBelt && b.ctx.CharacterCfg.Inventory.BeltColumns.Total(data.HealingPotion) > 0
 				needManaPotionsRefill := !manaPotionsFoundInBelt && b.ctx.CharacterCfg.Inventory.BeltColumns.Total(data.ManaPotion) > 0
 				needRejuvPotionsRefill := !rejuvPotionsFoundInBelt && b.ctx.CharacterCfg.Inventory.BeltColumns.Total(data.RejuvenationPotion) > 0
@@ -281,89 +301,104 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 				shouldRefillManaPotions := needManaPotionsRefill && hasManaPotionsInInventory
 				shouldRefillRejuvPotions := needRejuvPotionsRefill && hasRejuvPotionsInInventory
 
-				// Refill belt if:
-				// 1. Each potion type (healing/mana) is either already in belt or needed and available in inventory
-				// 2. And at least one potion type actually needs refilling
-				// Note: If one type (healing/mana) can be refilled but the other cannot, we skip refill and go to town instead
-				// 3. BUT will refill in any case if rejuvenation potions are needed and available in inventory
 				shouldRefillBelt := ((shouldRefillHealingPotions || healingPotionsFoundInBelt) &&
 					(shouldRefillManaPotions || manaPotionsFoundInBelt) &&
 					(needHealingPotionsRefill || needManaPotionsRefill)) || shouldRefillRejuvPotions
 
-				if shouldRefillBelt && !isInTown {
-					action.ManageBelt()
-					action.RefillBeltFromInventory()
-					b.ctx.RefreshGameData()
-
-					// Recheck potions in belt after refill
-					_, healingPotionsFoundInBelt = b.ctx.Data.Inventory.Belt.GetFirstPotion(data.HealingPotion)
-					_, manaPotionsFoundInBelt = b.ctx.Data.Inventory.Belt.GetFirstPotion(data.ManaPotion)
-					needHealingPotionsRefill = !healingPotionsFoundInBelt && b.ctx.CharacterCfg.Inventory.BeltColumns.Total(data.HealingPotion) > 0
-					needManaPotionsRefill = !manaPotionsFoundInBelt && b.ctx.CharacterCfg.Inventory.BeltColumns.Total(data.ManaPotion) > 0
+				isInTown := b.ctx.Data.PlayerUnit.Area.IsTown()
+				if isInTown {
+					shouldRefillBelt = false
 				}
 
+				shouldReturnTown := false
 				townChicken := b.ctx.CharacterCfg.Health.TownChickenAt > 0 && b.ctx.Data.PlayerUnit.HPPercent() <= b.ctx.CharacterCfg.Health.TownChickenAt
 
-				// Check if we need to go back to town (level, gold, and TP quantity are met, AND then other conditions)
 				if _, found := b.ctx.Data.KeyBindings.KeyBindingForSkill(skill.TomeOfTownPortal); found {
+					if !b.NeedsTPsToContinue() {
+						shouldReturnTown = b.shouldReturnToTown(lvl.Value, needHealingPotionsRefill, needManaPotionsRefill, townChicken)
+					}
+				}
 
-					lvl, _ := b.ctx.Data.PlayerUnit.FindStat(stat.Level, 0)
+				shouldCorrectArea := b.ctx.CurrentGame.AreaCorrection.Enabled
 
-					if !b.NeedsTPsToContinue() { // Now calls b.NeedsTPsToContinue()
-						// The curly brace was misplaced here. It should enclose the entire inner 'if' block.
-						// This outer 'if' now acts as the gatekeeper for the inner 'if'.
-						if (b.ctx.Data.PlayerUnit.TotalPlayerGold() > 500 && lvl.Value <= 5) ||
-							(b.ctx.Data.PlayerUnit.TotalPlayerGold() > 1000 && lvl.Value < 20) ||
-							(b.ctx.Data.PlayerUnit.TotalPlayerGold() > 5000 && lvl.Value >= 20) {
+				// Action Execution
+				// Only switch to High Priority if we actually have work to do.
+				if shouldPickup || shouldBuff || shouldRefillBelt || shouldReturnTown || shouldCorrectArea {
+					b.ctx.SwitchPriority(botCtx.PriorityHigh)
 
-							if (b.ctx.CharacterCfg.BackToTown.NoHpPotions && needHealingPotionsRefill ||
-								b.ctx.CharacterCfg.BackToTown.EquipmentBroken && action.IsEquipmentBroken() ||
-								b.ctx.CharacterCfg.BackToTown.NoMpPotions && needManaPotionsRefill ||
-								townChicken ||
-								b.ctx.CharacterCfg.BackToTown.MercDied &&
-									b.ctx.Data.MercHPPercent() <= 0 &&
-									b.ctx.CharacterCfg.Character.UseMerc &&
-									b.ctx.Data.PlayerUnit.TotalPlayerGold() > 100000) &&
-								!b.ctx.Data.PlayerUnit.Area.IsTown() &&
-								b.ctx.Data.PlayerUnit.Area != area.UberTristram {
-
-								// Log the exact reason for going back to town
-								var reason string
-								if b.ctx.CharacterCfg.BackToTown.NoHpPotions && needHealingPotionsRefill {
-									reason = "No healing potions found"
-								} else if b.ctx.CharacterCfg.BackToTown.EquipmentBroken && action.RepairRequired() {
-									reason = "Equipment broken"
-								} else if b.ctx.CharacterCfg.BackToTown.NoMpPotions && needManaPotionsRefill {
-									reason = "No mana potions found"
-								} else if b.ctx.CharacterCfg.BackToTown.MercDied && b.ctx.Data.MercHPPercent() <= 0 && b.ctx.CharacterCfg.Character.UseMerc {
-									reason = "Mercenary is dead"
-								} else if townChicken {
-									reason = "Town chicken"
-								}
-
-								b.ctx.Logger.Info("Going back to town", "reason", reason)
-
-								if err = action.InRunReturnTownRoutine(); err != nil {
-									b.ctx.Logger.Warn("Failed returning town. Returning error to stop game.", "error", err)
-									// THIS IS THE KEY CHANGE: If InRunReturnTownRoutine() returns an error, we propagate it.
-									// This will cause the entire errgroup to cancel, and the bot.Run to return this error.
-									return err // <--- THIS IS THE ONLY CHANGE IN THIS FILE
-								}
-							}
+					// Execute Area Correction
+					if shouldCorrectArea {
+						if err = action.AreaCorrection(); err != nil {
+							b.ctx.Logger.Warn("Area correction failed", "error", err)
 						}
 					}
-				} // This closing brace was misplaced. It should be here, closing the outer 'if'.
-				b.ctx.SwitchPriority(botCtx.PriorityNormal)
+
+					// Execute Pickup
+					if shouldPickup {
+						action.ItemPickup(30)
+					}
+
+					// Execute Buff
+					if shouldBuff {
+						action.BuffIfRequired()
+					}
+
+					// Execute Belt Refill
+					if shouldRefillBelt && !isInTown {
+						// Double check condition inside lock if needed, but usually safe to run
+						action.ManageBelt()
+						action.RefillBeltFromInventory()
+
+						if shouldReturnTown {
+							b.ctx.RefreshGameData()
+							_, healingPotionsFoundInBelt = b.ctx.Data.Inventory.Belt.GetFirstPotion(data.HealingPotion)
+							_, manaPotionsFoundInBelt = b.ctx.Data.Inventory.Belt.GetFirstPotion(data.ManaPotion)
+							needHealingPotionsRefill = !healingPotionsFoundInBelt && b.ctx.CharacterCfg.Inventory.BeltColumns.Total(data.HealingPotion) > 0
+							needManaPotionsRefill = !manaPotionsFoundInBelt && b.ctx.CharacterCfg.Inventory.BeltColumns.Total(data.ManaPotion) > 0
+							shouldReturnTown = b.shouldReturnToTown(lvl.Value, needHealingPotionsRefill, needManaPotionsRefill, townChicken)
+						}
+					}
+
+					// Execute Town Return
+					if shouldReturnTown {
+						// Log the exact reason for going back to town
+						var reason string
+						if b.ctx.CharacterCfg.BackToTown.NoHpPotions && needHealingPotionsRefill {
+							reason = "No healing potions found"
+						} else if b.ctx.CharacterCfg.BackToTown.EquipmentBroken && action.RepairRequired() {
+							reason = "Equipment broken"
+						} else if b.ctx.CharacterCfg.BackToTown.NoMpPotions && needManaPotionsRefill {
+							reason = "No mana potions found"
+						} else if b.ctx.CharacterCfg.BackToTown.MercDied && b.ctx.Data.MercHPPercent() <= 0 && b.ctx.CharacterCfg.Character.UseMerc {
+							reason = "Mercenary is dead"
+						} else if townChicken {
+							reason = "Town chicken"
+						}
+
+						b.ctx.Logger.Info("Going back to town", "reason", reason)
+
+						if err = action.InRunReturnTownRoutine(); err != nil {
+							b.ctx.Logger.Warn("Failed returning town. Returning error to stop game.", "error", err)
+							return err
+						}
+					}
+
+					b.ctx.SwitchPriority(botCtx.PriorityNormal)
+				}
 			}
 		}
 	})
 
 	// Low priority loop, this will keep executing main run scripts
-	g.Go(func() error {
+	g.Go(func() (returnErr error) {
 		defer func() {
 			cancel()
 			b.Stop()
-			recover()
+			if r := recover(); r != nil {
+				if e, ok := r.(error); ok && errors.Is(e, health.ErrChicken) {
+					returnErr = e
+				}
+			}
 		}()
 
 		b.ctx.AttachRoutine(botCtx.PriorityNormal)
@@ -396,21 +431,9 @@ func (b *Bot) Run(ctx context.Context, firstRun bool, runs []run.Run) error {
 
 				// Drop: Handle Drop interrupt from step functions
 				if errors.Is(err, drop.ErrInterrupt) {
-					b.ctx.Logger.Info("Drop request acknowledged, switching to Drop routine")
+					b.ctx.Logger.Info("Drop request acknowledged, ending run to hand over to supervisor")
 					step.CleanupForDrop()
-					_ = b.ctx.Manager.ExitGame()
-
-					d := run.NewDrop()
-					if derr := d.Run(nil); derr != nil {
-						b.ctx.Logger.Error("Drop run failed", "error", derr)
-					} else {
-						b.ctx.Logger.Info("Drop run completed successfully")
-					}
-
-					// Note: ResetDropContext() is called in Drop.go's defer
-					// to handle both success and failure cases consistently
-
-					return nil
+					return drop.ErrInterrupt
 				}
 
 				var runFinishReason event.FinishReason

@@ -29,6 +29,8 @@ const BELT_COLUMN_OPTIONS = [
  * ExitGame?: boolean,
  * stopIfCheckFails?: boolean,
  * StopIfCheckFails?: boolean,
+ * skipCountessWhenStealthReady?: boolean,
+ * SkipCountessWhenStealthReady?: boolean,
  * parameters?: never
  * }} RawRunEntry
  */
@@ -71,7 +73,8 @@ const BELT_COLUMN_OPTIONS = [
  * lowGoldRun: boolean,
  * skipTownChores: boolean,
  * exitGame: boolean,
- * stopIfCheckFails: boolean
+ * stopIfCheckFails: boolean,
+ * skipCountessWhenStealthReady: boolean
  * }} SequenceRunEntry
  */
 
@@ -220,6 +223,9 @@ export class SequenceDataAdapter {
       skipTownChores: Boolean(raw.skipTownChores ?? raw.SkipTownChores),
       exitGame: Boolean(raw.exitGame ?? raw.ExitGame),
       stopIfCheckFails: Boolean(raw.stopIfCheckFails ?? raw.StopIfCheckFails),
+      skipCountessWhenStealthReady: Boolean(
+        raw.skipCountessWhenStealthReady ?? raw.SkipCountessWhenStealthReady
+      ),
     });
 
     this.state.ensureEntryUID(entry);
@@ -260,6 +266,20 @@ export class SequenceDataAdapter {
     this.healthFieldDefinitions().forEach(([field]) => {
       const value = parseOptionalNumber(healthSource[field]);
       if (value != null) {
+        entry.healthSettings[field] = value;
+      }
+    });
+
+    this.chickenCurseFieldDefinitions().forEach(([field]) => {
+      const value = healthSource[field];
+      if (typeof value === "boolean") {
+        entry.healthSettings[field] = value;
+      }
+    });
+
+    this.chickenAuraFieldDefinitions().forEach(([field]) => {
+      const value = healthSource[field];
+      if (typeof value === "boolean") {
         entry.healthSettings[field] = value;
       }
     });
@@ -359,6 +379,9 @@ export class SequenceDataAdapter {
     if (entry.stopIfCheckFails) {
       result.stopIfCheckFails = true;
     }
+    if (entry.skipCountessWhenStealthReady) {
+      result.skipCountessWhenStealthReady = true;
+    }
 
     return result;
   }
@@ -377,9 +400,25 @@ export class SequenceDataAdapter {
       result.level = entry.level;
     }
 
-    const health = /** @type {Record<string, number|Array<string|undefined>>} */ ({});
+    const health = /** @type {Record<string, number|boolean|Array<string|undefined>>} */ ({});
     if (entry.healthSettings && typeof entry.healthSettings === "object") {
       this.healthFieldDefinitions().forEach(([field]) => {
+        const value = entry.healthSettings[field];
+        if (value != null) {
+          health[field] = value;
+        }
+      });
+
+      // Serialize chicken on curses (boolean fields)
+      this.chickenCurseFieldDefinitions().forEach(([field]) => {
+        const value = entry.healthSettings[field];
+        if (value != null) {
+          health[field] = value;
+        }
+      });
+
+      // Serialize chicken on auras (boolean fields)
+      this.chickenAuraFieldDefinitions().forEach(([field]) => {
         const value = entry.healthSettings[field];
         if (value != null) {
           health[field] = value;
@@ -512,6 +551,7 @@ export class SequenceDataAdapter {
     entry.skipTownChores = Boolean(entry.skipTownChores);
     entry.exitGame = Boolean(entry.exitGame);
     entry.stopIfCheckFails = Boolean(entry.stopIfCheckFails);
+    entry.skipCountessWhenStealthReady = Boolean(entry.skipCountessWhenStealthReady);
     if ("parameters" in entry) {
       delete entry.parameters;
     }
@@ -639,6 +679,7 @@ export class SequenceDataAdapter {
       skipTownChores: false,
       exitGame: false,
       stopIfCheckFails: false,
+      skipCountessWhenStealthReady: false,
     });
     this.state.ensureEntryUID(entry);
     return entry;
@@ -661,6 +702,33 @@ export class SequenceDataAdapter {
       ["healingPotionCount", "Inventory Healing Potions", "Heal pots", "count"],
       ["manaPotionCount", "Inventory Mana Potions", "Mana pots", "count"],
       ["rejuvPotionCount", "Inventory Rejuv Potions", "Rejuv pots", "count"],
+    ];
+  }
+
+  /**
+   * @returns {Array<[string, string, string]>}
+   */
+  chickenCurseFieldDefinitions() {
+    return [
+      ["chickenAmplifyDamage", "Amplify Damage", "Amp Dmg"],
+      ["chickenDecrepify", "Decrepify", "Decrep"],
+      ["chickenLowerResist", "Lower Resist", "Lower Res"],
+      ["chickenBloodMana", "Blood Mana", "Blood Mana"],
+    ];
+  }
+
+  /**
+   * @returns {Array<[string, string, string]>}
+   */
+  chickenAuraFieldDefinitions() {
+    return [
+      ["chickenFanaticism", "Fanaticism", "Fanat"],
+      ["chickenMight", "Might", "Might"],
+      ["chickenConviction", "Conviction", "Conv"],
+      ["chickenHolyFire", "Holy Fire", "H.Fire"],
+      ["chickenBlessedAim", "Blessed Aim", "B.Aim"],
+      ["chickenHolyFreeze", "Holy Freeze", "H.Freeze"],
+      ["chickenHolyShock", "Holy Shock", "H.Shock"],
     ];
   }
 

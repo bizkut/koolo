@@ -10,6 +10,7 @@ import (
 	"github.com/hectorgimenez/d2go/pkg/data"
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/item"
+	"github.com/hectorgimenez/d2go/pkg/data/quest"
 	"github.com/hectorgimenez/d2go/pkg/data/stat"
 	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/context"
@@ -462,6 +463,43 @@ func GetItemsToPickup(maxDistance int) []data.Item {
 	return filteredItems
 }
 
+func hasVisibleSkillBonuses(i data.Item) bool {
+	if i.Quality > item.QualitySuperior {
+		return false
+	}
+	for _, statData := range i.Stats {
+		if statData.Value <= 0 {
+			continue
+		}
+		switch statData.ID {
+		case stat.SingleSkill, stat.AddClassSkills, stat.AddSkillTab, stat.AllSkills:
+			return true
+		}
+	}
+	return false
+}
+
+func isAmmoOrJavelin(i data.Item) bool {
+	if i.Desc().Name == "Bolts" || i.Desc().Name == "Arrows" {
+		return true
+	}
+	return i.Name == "Javelin"
+}
+
+func shouldAlwaysPickupForLeveling(i data.Item) bool {
+	if i.Quality == item.QualityRare || i.Quality == item.QualitySet || i.Quality == item.QualityUnique {
+		return true
+	}
+	if i.Quality != item.QualityMagic {
+		return false
+	}
+	itmType := i.Type()
+	return itmType.IsType(item.TypeRing) ||
+		itmType.IsType(item.TypeAmulet) ||
+		itmType.IsType(item.TypeJewel) ||
+		itmType.IsType(item.TypeSmallCharm)
+}
+
 func shouldBePickedUp(i data.Item) bool {
 	ctx := context.Get()
 	ctx.SetLastAction("shouldBePickedUp")
@@ -474,10 +512,80 @@ func shouldBePickedUp(i data.Item) bool {
 	// Pick up quest items if in a leveling or questing run.
 	specialRuns := slices.Contains(ctx.CharacterCfg.Game.Runs, "quests") || slices.Contains(ctx.CharacterCfg.Game.Runs, "leveling") || slices.Contains(ctx.CharacterCfg.Game.Runs, "leveling_sequence")
 	if specialRuns {
+		questItem := false
 		switch i.Name {
 		case "Scroll of Inifuss", "ScrollOfInifuss", "LamEsensTome", "HoradricCube", "HoradricMalus",
 			"AmuletoftheViper", "StaffofKings", "HoradricStaff",
 			"AJadeFigurine", "KhalimsEye", "KhalimsBrain", "KhalimsHeart", "KhalimsFlail", "HellforgeHammer", "TheGidbinn":
+			questItem = true
+		}
+		if questItem {
+			// Avoid repeated pickup attempts when the quest item is already owned.
+			if _, found := ctx.Data.Inventory.Find(i.Name,
+				item.LocationInventory,
+				item.LocationStash,
+				item.LocationSharedStash,
+				item.LocationEquipped,
+				item.LocationCube,
+			); found {
+				return false
+			}
+			switch i.Name {
+			case "Scroll of Inifuss", "ScrollOfInifuss":
+				if ctx.Data.Quests[quest.Act1TheSearchForCain].Completed() {
+					return false
+				}
+			case "HoradricMalus":
+				if ctx.Data.Quests[quest.Act1ToolsOfTheTrade].Completed() {
+					return false
+				}
+			case "StaffofKings", "AmuletoftheViper", "HoradricStaff":
+				if ctx.Data.Quests[quest.Act2TheHoradricStaff].Completed() {
+					return false
+				}
+			case "KhalimsEye", "KhalimsBrain", "KhalimsHeart", "KhalimsFlail":
+				if ctx.Data.Quests[quest.Act3KhalimsWill].Completed() {
+					return false
+				}
+			case "LamEsensTome":
+				if ctx.Data.Quests[quest.Act3LamEsensTome].Completed() {
+					return false
+				}
+			case "AJadeFigurine":
+				if ctx.Data.Quests[quest.Act3TheGoldenBird].Completed() {
+					return false
+				}
+			case "TheGidbinn":
+				if ctx.Data.Quests[quest.Act3BladeOfTheOldReligion].Completed() {
+					return false
+				}
+			case "HellforgeHammer":
+				if ctx.Data.Quests[quest.Act4HellForge].Completed() {
+					return false
+				}
+			}
+			switch i.Name {
+			case "KhalimsEye", "KhalimsBrain", "KhalimsHeart", "KhalimsFlail":
+				if _, found := ctx.Data.Inventory.Find("KhalimsWill",
+					item.LocationInventory,
+					item.LocationStash,
+					item.LocationSharedStash,
+					item.LocationEquipped,
+					item.LocationCube,
+				); found {
+					return false
+				}
+			case "StaffofKings", "AmuletoftheViper":
+				if _, found := ctx.Data.Inventory.Find("HoradricStaff",
+					item.LocationInventory,
+					item.LocationStash,
+					item.LocationSharedStash,
+					item.LocationEquipped,
+					item.LocationCube,
+				); found {
+					return false
+				}
+			}
 			return true
 		}
 	}
@@ -493,17 +601,27 @@ func shouldBePickedUp(i data.Item) bool {
 		return false
 	}
 
-	// In leveling runs, pick up any non‑gold item if very low on gold.
+	// In leveling runs, pick up any non-gold item if very low on gold.
 	_, isLevelingChar := ctx.Char.(context.LevelingCharacter)
+	if isLevelingChar && ctx.Data.PlayerUnit.TotalPlayerGold() >= 1000 && isAmmoOrJavelin(i) {
+		return false
+	}
 	if isLevelingChar && IsLowGold() && i.Name != "Gold" {
 		return true
 	}
-
 	// Pick up stamina potions only when needed in leveling runs.
 	if isLevelingChar && i.Name == "StaminaPotion" {
 		if ctx.HealthManager.ShouldPickStaminaPot() {
 			return true
 		}
+	}
+
+	if isLevelingChar && hasVisibleSkillBonuses(i) {
+		return true
+	}
+
+	if isLevelingChar && shouldAlwaysPickupForLeveling(i) {
+		return true
 	}
 
 	// If total gold is below the minimum threshold, pick up magic and better items for selling.

@@ -643,10 +643,11 @@ func (s SorceressLeveling) ShouldResetSkills() bool {
 func (s SorceressLeveling) SkillsToBind() (skill.ID, []skill.ID) {
 	level, _ := s.Data.PlayerUnit.FindStat(stat.Level, 0)
 
-	skillBindings := []skill.ID{
-		skill.FireBolt,
-	}
+	skillBindings := []skill.ID{}
 
+	if level.Value < 24 {
+		skillBindings = append(skillBindings, skill.FireBolt)
+	}
 	if level.Value >= 2 {
 		skillBindings = append(skillBindings, skill.FrozenArmor)
 	}
@@ -978,7 +979,7 @@ func (s SorceressLeveling) KillDiablo() error {
 			if diabloFound {
 				return nil
 			}
-			time.Sleep(200)
+			time.Sleep(200 * time.Millisecond)
 			continue
 		}
 

@@ -16,13 +16,19 @@ const (
 	PindleskinRun       Run = "pindleskin"
 	NihlathakRun        Run = "nihlathak"
 	TristramRun         Run = "tristram"
+	JailRun             Run = "jail"
+	BoneAshRun          Run = "bone_ash"
+	CaveRun             Run = "cave"
+	FlayerJungleRun     Run = "flayer_jungle"
 	LowerKurastRun      Run = "lower_kurast"
 	LowerKurastChestRun Run = "lower_kurast_chest"
+	KurastTemplesRun    Run = "kurast_temples"
 	StonyTombRun        Run = "stony_tomb"
 	PitRun              Run = "pit"
 	ArachnidLairRun     Run = "arachnid_lair"
 	TalRashaTombsRun    Run = "tal_rasha_tombs"
 	BaalRun             Run = "baal"
+	RiverOfFlameRun     Run = "river_of_flame"
 	DiabloRun           Run = "diablo"
 	CowsRun             Run = "cows"
 	LevelingRun         Run = "leveling"
@@ -89,13 +95,19 @@ var AvailableRuns = map[Run]interface{}{
 	PindleskinRun:       nil,
 	NihlathakRun:        nil,
 	TristramRun:         nil,
+	JailRun:             nil,
+	BoneAshRun:          nil,
+	CaveRun:             nil,
+	FlayerJungleRun:     nil,
 	LowerKurastRun:      nil,
 	LowerKurastChestRun: nil,
+	KurastTemplesRun:    nil,
 	StonyTombRun:        nil,
 	PitRun:              nil,
 	ArachnidLairRun:     nil,
 	TalRashaTombsRun:    nil,
 	BaalRun:             nil,
+	RiverOfFlameRun:     nil,
 	DiabloRun:           nil,
 	CowsRun:             nil,
 	LevelingRun:         nil,
@@ -160,6 +172,8 @@ var SequencerRuns = []Run{
 	ArachnidLairRun,
 	BaalRun,
 	BloodravenRun,
+	BoneAshRun,
+	CaveRun,
 	CountessRun,
 	CowsRun,
 	CubeRun,
@@ -169,14 +183,17 @@ var SequencerRuns = []Run{
 	DurielRun,
 	EldritchRun,
 	EnduguRun,
-	FrozenAuraMercRun,
 	FireEyeRun,
+	FlayerJungleRun,
+	FrozenAuraMercRun,
 	GidbinnRun,
 	IzualRun,
 	JadeFigurineRun,
+	JailRun,
 	KhalimsBrainRun,
 	KhalimsEyeRun,
 	KhalimsHeartRun,
+	KurastTemplesRun,
 	LamEsenRun,
 	LowerKurastChestRun,
 	LowerKurastRun,
@@ -190,12 +207,14 @@ var SequencerRuns = []Run{
 	RescueBarbsRun,
 	RescueCainRun,
 	RetrieveHammerRun,
+	RiverOfFlameRun,
 	ShenkRun,
 	SpiderCavernRun,
 	StaffRun,
 	StonyTombRun,
 	SummonerRun,
 	TalRashaTombsRun,
+	TerrorZoneRun,
 	ThreshsocketRun,
 	TravincalRun,
 	TristramEarlyGoldfarmRun,

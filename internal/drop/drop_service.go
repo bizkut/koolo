@@ -13,7 +13,7 @@ type Service struct {
 
 	// queued start-Drop requests per supervisor
 	queuedStart map[string][]StartRequest
-	// persistent Drop requests per supervisor (10min timeout)
+	// persistent Drop requests per supervisor (3min timeout)
 	persistentRequests map[string][]*Request
 }
 
@@ -59,6 +59,7 @@ func (s *Service) AttachManager(supervisorName string, mgr *Manager) {
 		if dropReq != nil {
 			dropReq.CardID = req.CardID
 			dropReq.CardName = req.CardName
+			dropReq.Filters = req.Filter
 		}
 	}
 
@@ -70,7 +71,12 @@ func (s *Service) AttachManager(supervisorName string, mgr *Manager) {
 		if persistentReq.Filters.Enabled {
 			mgr.UpdateFilters(persistentReq.Filters)
 		}
-		mgr.RequestDrop(persistentReq.RoomName, persistentReq.Password)
+		dropReq := mgr.RequestDrop(persistentReq.RoomName, persistentReq.Password)
+		if dropReq != nil {
+			dropReq.CardID = persistentReq.CardID
+			dropReq.CardName = persistentReq.CardName
+			dropReq.Filters = persistentReq.Filters
+		}
 	}
 
 }
@@ -115,7 +121,7 @@ func (s *Service) consumePersistentRequest(supervisor string) (*Request, bool) {
 			s.persistentRequests[supervisor] = queue
 		}
 
-		if req != nil && time.Since(req.CreatedAt) < 10*time.Minute {
+		if req != nil && time.Since(req.CreatedAt) < persistentRequestTTL {
 			return req, true
 		}
 		// skip expired and continue
@@ -134,7 +140,7 @@ func (s *Service) SetClearPersistentRequestCallback(callback func(supervisor str
 }
 
 // Register Drop result callback
-func (s *Service) SetDropResultCallback(callback func(supervisorName, room, result string, itemsDroppered int, duration time.Duration, errorMsg string)) {
+func (s *Service) SetDropResultCallback(callback func(supervisorName, room, result string, itemsDroppered int, duration time.Duration, errorMsg string, filters Filters)) {
 	s.coord.SetDropResultCallback(callback)
 }
 

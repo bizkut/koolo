@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/hectorgimenez/d2go/pkg/data/area"
 	"github.com/hectorgimenez/d2go/pkg/data/difficulty"
@@ -40,14 +41,15 @@ type DifficultyLevelingSettings struct {
 }
 
 type SequenceSettings struct {
-	Run              string `json:"run"`
-	MinLevel         *int   `json:"minLevel,omitempty"`
-	MaxLevel         *int   `json:"maxLevel,omitempty"`
-	LowGoldRun       bool   `json:"lowGoldRun,omitempty"`
-	SkipTownChores   bool   `json:"skipTownChores,omitempty"`
-	ExitGame         bool   `json:"exitGame,omitempty"`
-	StopIfCheckFails bool   `json:"stopIfCheckFails,omitempty"`
-	Parameters       string `json:"parameters,omitempty"`
+	Run                          string `json:"run"`
+	MinLevel                     *int   `json:"minLevel,omitempty"`
+	MaxLevel                     *int   `json:"maxLevel,omitempty"`
+	LowGoldRun                   bool   `json:"lowGoldRun,omitempty"`
+	SkipTownChores               bool   `json:"skipTownChores,omitempty"`
+	ExitGame                     bool   `json:"exitGame,omitempty"`
+	StopIfCheckFails             bool   `json:"stopIfCheckFails,omitempty"`
+	SkipCountessWhenStealthReady bool   `json:"skipCountessWhenStealthReady,omitempty"`
+	Parameters                   string `json:"parameters,omitempty"`
 }
 
 type DifficultyConditionsSettings struct {
@@ -66,19 +68,30 @@ type ConfigLevelingSettings struct {
 }
 
 type HealthLevelingSettings struct {
-	HealingPotionAt     *int      `json:"healingPotionAt,omitempty"`
-	ManaPotionAt        *int      `json:"manaPotionAt,omitempty"`
-	RejuvPotionAtLife   *int      `json:"rejuvPotionAtLife,omitempty"`
-	RejuvPotionAtMana   *int      `json:"rejuvPotionAtMana,omitempty"`
-	MercHealingPotionAt *int      `json:"mercHealingPotionAt,omitempty"`
-	MercRejuvPotionAt   *int      `json:"mercRejuvPotionAt,omitempty"`
-	ChickenAt           *int      `json:"chickenAt,omitempty"`
-	TownChickenAt       *int      `json:"townChickenAt,omitempty"`
-	MercChickenAt       *int      `json:"mercChickenAt,omitempty"`
-	HealingPotionCount  *int      `json:"healingPotionCount,omitempty"`
-	ManaPotionCount     *int      `json:"manaPotionCount,omitempty"`
-	RejuvPotionCount    *int      `json:"rejuvPotionCount,omitempty"`
-	BeltColumns         *[]string `json:"beltColumns,omitempty"`
+	HealingPotionAt      *int      `json:"healingPotionAt,omitempty"`
+	ManaPotionAt         *int      `json:"manaPotionAt,omitempty"`
+	RejuvPotionAtLife    *int      `json:"rejuvPotionAtLife,omitempty"`
+	RejuvPotionAtMana    *int      `json:"rejuvPotionAtMana,omitempty"`
+	MercHealingPotionAt  *int      `json:"mercHealingPotionAt,omitempty"`
+	MercRejuvPotionAt    *int      `json:"mercRejuvPotionAt,omitempty"`
+	ChickenAt            *int      `json:"chickenAt,omitempty"`
+	TownChickenAt        *int      `json:"townChickenAt,omitempty"`
+	MercChickenAt        *int      `json:"mercChickenAt,omitempty"`
+	HealingPotionCount   *int      `json:"healingPotionCount,omitempty"`
+	ManaPotionCount      *int      `json:"manaPotionCount,omitempty"`
+	RejuvPotionCount     *int      `json:"rejuvPotionCount,omitempty"`
+	BeltColumns          *[]string `json:"beltColumns,omitempty"`
+	ChickenAmplifyDamage *bool     `json:"chickenAmplifyDamage,omitempty"`
+	ChickenDecrepify     *bool     `json:"chickenDecrepify,omitempty"`
+	ChickenLowerResist   *bool     `json:"chickenLowerResist,omitempty"`
+	ChickenBloodMana     *bool     `json:"chickenBloodMana,omitempty"`
+	ChickenFanaticism    *bool     `json:"chickenFanaticism,omitempty"`
+	ChickenMight         *bool     `json:"chickenMight,omitempty"`
+	ChickenConviction    *bool     `json:"chickenConviction,omitempty"`
+	ChickenHolyFire      *bool     `json:"chickenHolyFire,omitempty"`
+	ChickenBlessedAim    *bool     `json:"chickenBlessedAim,omitempty"`
+	ChickenHolyFreeze    *bool     `json:"chickenHolyFreeze,omitempty"`
+	ChickenHolyShock     *bool     `json:"chickenHolyShock,omitempty"`
 }
 
 func NewLevelingSequence() *LevelingSequence {
@@ -239,7 +252,7 @@ func (ls LevelingSequence) CheckSequenceRequirements(run Run, sequenceSettings S
 	}
 
 	if sequenceSettings.MaxLevel != nil {
-		if playerLevel >= *sequenceSettings.MaxLevel {
+		if playerLevel > *sequenceSettings.MaxLevel {
 			return false, nil
 		}
 	}
@@ -282,19 +295,36 @@ func (ls *LevelingSequence) LoadSettings() error {
 	getAbsPath := func(relPath string) string {
 		return filepath.Join(cwd, relPath)
 	}
-	fileName := ls.ctx.CharacterCfg.Game.LevelingSequence.SequenceFile
+	rawName := strings.TrimSpace(ls.ctx.CharacterCfg.Game.LevelingSequence.SequenceFile)
+	if rawName == "" {
+		message := "Stopping supervisor now. Leveling sequence file is not set.\nSelect a sequence.json file in your config and restart the supervisor"
+		ls.ctx.Logger.Error("leveling sequence file is not set")
+		utils.ShowDialog("Missing leveling sequence for supervisor "+ls.ctx.Name, message)
+		ls.ctx.StopSupervisor()
+		return errors.New("leveling sequence file is not set")
+	}
+	fileName := rawName
+	if strings.HasSuffix(strings.ToLower(fileName), ".json") {
+		fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	}
 	levelingSequencesPath := getAbsPath(filepath.Join("config", "template", "sequences_leveling"))
 	sequenceFilePath := filepath.Join(levelingSequencesPath, fileName+".json")
 	jsonData, err := utils.GetJsonData(sequenceFilePath)
 	if err != nil {
-		ls.ctx.Logger.Error("failed to load sequence ", "file name", fileName)
+		message := fmt.Sprintf("Stopping supervisor now. Unable to load leveling sequence file: %s.json", fileName)
+		ls.ctx.Logger.Error("failed to load sequence", "file name", fileName, "error", err)
+		utils.ShowDialog("Invalid leveling sequence for supervisor "+ls.ctx.Name, message)
+		ls.ctx.StopSupervisor()
 		return err
 	}
 
 	var sequenceSettings LevelingSequenceSettings
 	err = json.Unmarshal(jsonData, &sequenceSettings)
 	if err != nil {
-		ls.ctx.Logger.Error("failed to parse sequence json ", "file name", fileName)
+		message := fmt.Sprintf("Stopping supervisor now. Invalid leveling sequence JSON: %s.json", fileName)
+		ls.ctx.Logger.Error("failed to parse sequence json", "file name", fileName, "error", err)
+		utils.ShowDialog("Invalid leveling sequence for supervisor "+ls.ctx.Name, message)
+		ls.ctx.StopSupervisor()
 		return err
 	}
 
@@ -400,6 +430,39 @@ func (ls LevelingSequence) ApplyHealthSetting(healthSetting HealthLevelingSettin
 	}
 	if healthSetting.BeltColumns != nil {
 		ls.applyBeltColumnsOverride(*healthSetting.BeltColumns)
+	}
+	if healthSetting.ChickenAmplifyDamage != nil {
+		ls.ctx.CharacterCfg.ChickenOnCurses.AmplifyDamage = *healthSetting.ChickenAmplifyDamage
+	}
+	if healthSetting.ChickenDecrepify != nil {
+		ls.ctx.CharacterCfg.ChickenOnCurses.Decrepify = *healthSetting.ChickenDecrepify
+	}
+	if healthSetting.ChickenLowerResist != nil {
+		ls.ctx.CharacterCfg.ChickenOnCurses.LowerResist = *healthSetting.ChickenLowerResist
+	}
+	if healthSetting.ChickenBloodMana != nil {
+		ls.ctx.CharacterCfg.ChickenOnCurses.BloodMana = *healthSetting.ChickenBloodMana
+	}
+	if healthSetting.ChickenFanaticism != nil {
+		ls.ctx.CharacterCfg.ChickenOnAuras.Fanaticism = *healthSetting.ChickenFanaticism
+	}
+	if healthSetting.ChickenMight != nil {
+		ls.ctx.CharacterCfg.ChickenOnAuras.Might = *healthSetting.ChickenMight
+	}
+	if healthSetting.ChickenConviction != nil {
+		ls.ctx.CharacterCfg.ChickenOnAuras.Conviction = *healthSetting.ChickenConviction
+	}
+	if healthSetting.ChickenHolyFire != nil {
+		ls.ctx.CharacterCfg.ChickenOnAuras.HolyFire = *healthSetting.ChickenHolyFire
+	}
+	if healthSetting.ChickenBlessedAim != nil {
+		ls.ctx.CharacterCfg.ChickenOnAuras.BlessedAim = *healthSetting.ChickenBlessedAim
+	}
+	if healthSetting.ChickenHolyFreeze != nil {
+		ls.ctx.CharacterCfg.ChickenOnAuras.HolyFreeze = *healthSetting.ChickenHolyFreeze
+	}
+	if healthSetting.ChickenHolyShock != nil {
+		ls.ctx.CharacterCfg.ChickenOnAuras.HolyShock = *healthSetting.ChickenHolyShock
 	}
 
 	return nil
@@ -646,7 +709,7 @@ func (ls LevelingSequence) setupLevelOneConfig() {
 	ls.ctx.CharacterCfg.Character.UseMerc = false
 	ls.ctx.CharacterCfg.Character.StashToShared = false
 	ls.ctx.CharacterCfg.Game.UseCainIdentify = true
-	ls.ctx.CharacterCfg.CloseMiniPanel = false
+	ls.ctx.CharacterCfg.ClassicMode = true
 	ls.ctx.CharacterCfg.Gambling.Enabled = true
 	ls.ctx.CharacterCfg.MaxGameLength = 1200
 	ls.ctx.CharacterCfg.CubeRecipes.Enabled = true
@@ -663,7 +726,7 @@ func (ls LevelingSequence) setupLevelOneConfig() {
 	ls.ctx.CharacterCfg.Game.Pit.FocusOnElitePacks = false
 	ls.ctx.CharacterCfg.Game.Pit.OnlyClearLevel2 = false
 	ls.ctx.CharacterCfg.Game.Andariel.ClearRoom = true
-	ls.ctx.CharacterCfg.Game.Andariel.UseAntidoes = true
+	ls.ctx.CharacterCfg.Game.Andariel.UseAntidotes = true
 	ls.ctx.CharacterCfg.Game.Mephisto.KillCouncilMembers = false
 	ls.ctx.CharacterCfg.Game.Mephisto.OpenChests = false
 	ls.ctx.CharacterCfg.Game.Mephisto.ExitToA4 = true
@@ -707,7 +770,7 @@ func (ls LevelingSequence) AdjustDifficultyConfig() {
 	ls.ctx.CharacterCfg.Game.RunewordMaker.EnabledRecipes = ls.GetRunewords()
 	ls.ctx.CharacterCfg.Game.MinGoldPickupThreshold = 5000 * lvl.Value
 
-	if !ls.ctx.CharacterCfg.Character.UseMerc && ls.ctx.Data.Quests[quest.Act1SistersBurialGrounds].Completed() {
+	if !ls.ctx.CharacterCfg.Character.UseMerc && (ls.ctx.Data.Quests[quest.Act1SistersBurialGrounds].Completed() || lvl.Value >= 8) {
 		ls.ctx.CharacterCfg.Character.UseMerc = true
 	}
 

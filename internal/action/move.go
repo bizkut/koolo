@@ -10,6 +10,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/hectorgimenez/koolo/internal/chicken"
 	"github.com/hectorgimenez/koolo/internal/pather"
 	"github.com/hectorgimenez/koolo/internal/town"
 	"github.com/hectorgimenez/koolo/internal/utils"
@@ -21,6 +22,7 @@ import (
 	"github.com/hectorgimenez/d2go/pkg/data/state"
 	"github.com/hectorgimenez/koolo/internal/action/step"
 	"github.com/hectorgimenez/koolo/internal/context"
+	"github.com/hectorgimenez/koolo/internal/drop"
 	"github.com/hectorgimenez/koolo/internal/event"
 	"github.com/hectorgimenez/koolo/internal/game"
 	"github.com/hectorgimenez/koolo/internal/health"
@@ -28,7 +30,7 @@ import (
 
 const (
 	maxAreaSyncAttempts   = 10
-	areaSyncDelay         = 100 * time.Millisecond
+	areaSyncDelay         = 200 * time.Millisecond
 	monsterHandleCooldown = 500 * time.Millisecond // Reduced cooldown for more immediate re-engagement
 	lootAfterCombatRadius = 25                     // Define a radius for looting after combat
 )
@@ -68,6 +70,11 @@ var (
 
 // checkPlayerDeath checks if the player is dead and returns ErrDied if so.
 func checkPlayerDeath(ctx *context.Status) error {
+	if ctx.Manager == nil || !ctx.Manager.InGame() || ctx.Data.PlayerUnit.ID == 0 {
+		// Avoid false death checks while out of game or data is not yet valid.
+		return nil
+	}
+
 	if ctx.Data.PlayerUnit.Area.IsTown() {
 		return nil
 	}
@@ -79,8 +86,12 @@ func checkPlayerDeath(ctx *context.Status) error {
 }
 
 func ensureAreaSync(ctx *context.Status, expectedArea area.ID) error {
+	if ctx.Context != nil && ctx.Context.Drop != nil && ctx.Context.Drop.Pending() != nil && ctx.Context.Drop.Active() == nil {
+		return drop.ErrInterrupt
+	}
+
 	// Wait for area data to sync
-	for attempts := 0; attempts < maxAreaSyncAttempts; attempts++ {
+	for attempts := range maxAreaSyncAttempts {
 		ctx.RefreshGameData()
 
 		// Check for death during area sync
@@ -90,15 +101,16 @@ func ensureAreaSync(ctx *context.Status, expectedArea area.ID) error {
 
 		if ctx.Data.PlayerUnit.Area == expectedArea {
 			// Area ID matches, now verify collision data is loaded
-			if ctx.Data.AreaData.Grid != nil && 
-				ctx.Data.AreaData.Grid.CollisionGrid != nil && 
+			if ctx.Data.AreaData.Grid != nil &&
+				ctx.Data.AreaData.Grid.CollisionGrid != nil &&
 				len(ctx.Data.AreaData.Grid.CollisionGrid) > 0 {
 				// Additional check: ensure we have adjacent level data if this is a cross-area operation
 				// Give it one more refresh cycle to ensure all data is populated
 				if attempts > 0 {
-					time.Sleep(100 * time.Millisecond)
+					time.Sleep(areaSyncDelay + 50*time.Millisecond)
 					ctx.RefreshGameData()
 				}
+
 				return nil
 			}
 		}
@@ -244,6 +256,9 @@ func MoveToArea(dst area.ID) error {
 	}
 
 	if err != nil {
+		if errors.Is(err, drop.ErrInterrupt) {
+			return err
+		}
 		if errors.Is(err, health.ErrDied) { // Propagate death error
 			return err
 		}
@@ -454,6 +469,10 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 
 		isSafe := true
 		if !ctx.Data.AreaData.Area.IsTown() {
+			if !ctx.Data.CanTeleport() {
+				chicken.CheckForScaryAuraAndCurse()
+			}
+
 			//Safety first, handle enemies
 			if !opts.IgnoreMonsters() && (!ctx.Data.CanTeleport() || overrideClearPathDist) && time.Since(actionLastMonsterHandlingTime) > monsterHandleCooldown {
 				actionLastMonsterHandlingTime = time.Now()
@@ -490,13 +509,23 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 				}
 			}
 
-			//Check chests nearby
-			if ctx.CharacterCfg.Game.InteractWithChests && shrine.ID == 0 && chest.ID == 0 {
-				if closestChest, chestFound := ctx.PathFinder.GetClosestChest(ctx.Data.PlayerUnit.Position, true); chestFound {
-					blacklisted, exists := blacklistedInteractions[closestChest.ID]
-					if !exists || !blacklisted {
-						chest = *closestChest
-						//ctx.Logger.Debug(fmt.Sprintf("MoveTo: Found chest at %v, redirecting destination from %v", chest.Position, targetPosition))
+			// Check chests nearby
+			if shrine.ID == 0 && chest.ID == 0 {
+				// "Super chests only" has priority over the generic "all chests" mode.
+				if ctx.CharacterCfg.Game.InteractWithSuperChests && !ctx.CharacterCfg.Game.InteractWithChests {
+					if closestChest, chestFound := ctx.PathFinder.GetClosestSuperChest(ctx.Data.PlayerUnit.Position, true); chestFound {
+						blacklisted, exists := blacklistedInteractions[closestChest.ID]
+						if !exists || !blacklisted {
+							chest = *closestChest
+						}
+					}
+				} else if ctx.CharacterCfg.Game.InteractWithChests {
+					if closestChest, chestFound := ctx.PathFinder.GetClosestChest(ctx.Data.PlayerUnit.Position, true); chestFound {
+						blacklisted, exists := blacklistedInteractions[closestChest.ID]
+						if !exists || !blacklisted {
+							chest = *closestChest
+							//ctx.Logger.Debug(fmt.Sprintf("MoveTo: Found chest at %v, redirecting destination from %v", chest.Position, targetPosition))
+						}
 					}
 				}
 			}
@@ -620,7 +649,7 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 			adjustMinDist = false
 		}
 
-		//We're not done yet, split the path into smaller segments when outside of town
+		//We're not done yet, split the path into smaller segments
 		nextPosition := targetPosition
 		pathStep := 0
 		if !ctx.Data.AreaData.Area.IsTown() {
@@ -645,6 +674,19 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 			nextPosition = utils.PositionAddCoords(nextPathPos, pathOffsetX, pathOffsetY)
 			if pather.DistanceFromPoint(nextPosition, targetPosition) <= minDistanceToFinishMoving {
 				nextPosition = targetPosition
+			}
+		} else {
+			// In town: use path segmentation to avoid getting stuck on corners/objects
+			// Larger steps than combat but still segmented for obstacle avoidance
+			maxPathStep := 12
+
+			pathStep = min(maxPathStep, len(path)-1)
+			if pathStep > 0 {
+				nextPathPos := path[pathStep]
+				nextPosition = utils.PositionAddCoords(nextPathPos, pathOffsetX, pathOffsetY)
+				if pather.DistanceFromPoint(nextPosition, targetPosition) <= minDistanceToFinishMoving {
+					nextPosition = targetPosition
+				}
 			}
 		}
 
@@ -678,8 +720,8 @@ func MoveTo(toFunc func() (data.Position, bool), options ...step.MoveOption) err
 
 		stuck = false
 		previousPosition = ctx.Data.PlayerUnit.Position
-		//If we're not in town and moved without errors, move forward in the path
-		if !ctx.Data.AreaData.Area.IsTown() {
+		//Move forward in the path after successful movement
+		if pathStep > 0 {
 			path = path[pathStep:]
 		}
 	}

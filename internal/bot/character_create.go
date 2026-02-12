@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 	"syscall"
-	"unicode"
 	"unsafe"
 
 	"github.com/hectorgimenez/koolo/internal/context"
@@ -50,6 +49,8 @@ var (
 func AutoCreateCharacter(class, name string) error {
 	ctx := context.Get()
 	ctx.Logger.Info("[AutoCreate] Processing", slog.String("class", class), slog.String("name", name))
+	authMethod := strings.TrimSpace(ctx.CharacterCfg.AuthMethod)
+	isOfflineAuth := authMethod == "" || strings.EqualFold(authMethod, "None")
 
 	// 1. Enter character creation screen
 	if !ctx.GameReader.IsInCharacterCreationScreen() {
@@ -69,19 +70,37 @@ func AutoCreateCharacter(class, name string) error {
 	utils.Sleep(500)
 
 	// 3. Toggle Ladder
-	if !ctx.CharacterCfg.Game.IsNonLadderChar {
+	if !isOfflineAuth && !ctx.CharacterCfg.Game.IsNonLadderChar {
 		ctx.HID.Click(game.LeftButton, ui.CharLadderBtnX, ui.CharLadderBtnY)
 		utils.Sleep(300)
 	}
 
-	// 4. Input Name
+	// 4. Toggle Hardcore
+	if ctx.CharacterCfg.Game.IsHardCoreChar {
+		hardcoreX, hardcoreY := ui.CharHardcoreBtnX, ui.CharHardcoreBtnY
+		if isOfflineAuth {
+			// Offline creation screen omits ladder, shifting toggle positions left.
+			hardcoreX, hardcoreY = ui.CharOfflineHardcoreBtnX, ui.CharHardcoreBtnY
+		}
+		ctx.HID.Click(game.LeftButton, hardcoreX, hardcoreY)
+		utils.Sleep(300)
+	}
+
+	// 5. Input Name
+	ensureForegroundWindow(ctx)
 	if err := inputCharacterName(ctx, name); err != nil {
 		return err
 	}
 
-	// 5. Click Create Button
+	// 6. Click Create Button
 	ctx.HID.Click(game.LeftButton, ui.CharCreateBtnX, ui.CharCreateBtnY)
 	utils.Sleep(1500)
+
+	// 7. Confirm hardcore warning dialog
+	if ctx.CharacterCfg.Game.IsHardCoreChar {
+		ctx.HID.PressKey(win.VK_RETURN)
+		utils.Sleep(500)
+	}
 
 	// Wait for character selection screen and confirm the new character is visible/selected
 	for i := 0; i < 5; i++ {
@@ -102,6 +121,31 @@ func AutoCreateCharacter(class, name string) error {
 	}
 
 	return errors.New("creation timeout or character not found after creation")
+}
+
+func ensureForegroundWindow(ctx *context.Status) {
+	if ctx == nil || ctx.GameReader == nil {
+		return
+	}
+	hwnd := ctx.GameReader.HWND
+	if hwnd == 0 {
+		return
+	}
+
+	for i := 0; i < 3; i++ {
+		win.ShowWindow(hwnd, win.SW_RESTORE)
+		win.SetForegroundWindow(hwnd)
+		win.BringWindowToTop(hwnd)
+		win.SetActiveWindow(hwnd)
+		win.SetFocus(hwnd)
+		utils.Sleep(150)
+		if win.GetForegroundWindow() == hwnd {
+			return
+		}
+		utils.Sleep(150)
+	}
+
+	ctx.Logger.Warn("[AutoCreate] Failed to set foreground window before name input")
 }
 
 func enterCreationScreen(ctx *context.Status) error {
@@ -155,17 +199,9 @@ func inputCharacterName(ctx *context.Status, name string) error {
 
 func inputASCIIName(ctx *context.Status, name string) error {
 	for _, r := range name {
-		switch r {
-		case '-':
-			ctx.HID.PressKey(win.VK_OEM_MINUS)
-		case '_':
-			win.PostMessage(ctx.GameReader.HWND, win.WM_KEYDOWN, win.VK_LSHIFT, 0)
-			utils.Sleep(20)
-			ctx.HID.PressKey(win.VK_OEM_MINUS)
-			utils.Sleep(20)
-			win.PostMessage(ctx.GameReader.HWND, win.WM_KEYUP, win.VK_LSHIFT, 0)
-		default:
-			ctx.HID.PressKey(byte(unicode.ToUpper(r)))
+		if err := sendUnicodeChar(r); err != nil {
+			ctx.Logger.Error("Failed to send char", slog.String("char", string(r)), slog.Any("error", err))
+			return err
 		}
 		utils.Sleep(60)
 	}
